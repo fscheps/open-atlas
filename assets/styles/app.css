@@ -27,14 +27,14 @@
 
   html.dark {
     --bg: #09141f;
-    --panel: rgba(16, 30, 43, 0.9);
-    --panel-muted: rgba(16, 30, 43, 0.78);
+    --panel: rgba(9, 18, 28, 0.94);
+    --panel-muted: rgba(22, 35, 48, 0.94);
     --ink: #edf3f8;
-    --ink-soft: #9fb0c2;
+    --ink-soft: #c8d6e3;
     --accent: #69b7df;
     --accent-hover: #8ecdf0;
     --gold: #ffb457;
-    --border: rgba(151, 183, 212, 0.18);
+    --border: rgba(151, 183, 212, 0.26);
     --shadow: 0 20px 56px rgba(0, 0, 0, 0.5);
     --marker-fill: #63d0c8;
     --route-color: #69b7df;
@@ -45,7 +45,7 @@
     --grid-stroke: rgba(151, 183, 212, 0.06);
     --toast-bg: rgba(237, 243, 248, 0.96);
     --toast-ink: #09141f;
-    --label-bg: rgba(16, 30, 43, 0.94);
+    --label-bg: rgba(12, 23, 34, 0.97);
     --label-ink: #edf3f8;
   }
 
@@ -70,7 +70,7 @@
   }
 
   html.dark #map {
-    filter: brightness(0.85) contrast(1.05) hue-rotate(-10deg);
+    filter: brightness(0.93) contrast(1.07) saturate(0.92);
   }
 
   /* Control Panel */
@@ -115,6 +115,12 @@
   html.dark .control-panel::-webkit-scrollbar-thumb {
     background: rgba(237, 243, 248, 0.18);
     background-clip: padding-box;
+  }
+
+  html.dark .control-panel {
+    background: linear-gradient(180deg, rgba(10, 20, 30, 0.97), rgba(7, 15, 24, 0.94));
+    border-color: rgba(151, 183, 212, 0.24);
+    box-shadow: 0 28px 64px rgba(0, 0, 0, 0.56), inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
 
   body.panel-hidden .control-panel {
@@ -278,7 +284,16 @@
   }
 
   html.dark .workflow-pill {
-    background: rgba(16, 30, 43, 0.82);
+    background: rgba(20, 34, 47, 0.96);
+    color: #dfe8ef;
+    border-color: rgba(151, 183, 212, 0.2);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+
+  html.dark .workflow-pill.is-active {
+    background: rgba(105, 183, 223, 0.18);
+    border-color: rgba(105, 183, 223, 0.38);
+    color: #eff8ff;
   }
 
   .btn {
@@ -329,6 +344,24 @@
   }
 
   html.dark .btn:hover:not(:disabled) { color: #09141f; }
+
+  html.dark .btn,
+  html.dark .draft-note,
+  html.dark .chart-state,
+  html.dark .stat,
+  html.dark .modal .check-row,
+  html.dark .route-card,
+  html.dark .leaflet-control-zoom a,
+  html.dark .leaflet-control-attribution {
+    background: rgba(20, 34, 47, 0.96) !important;
+    border-color: rgba(151, 183, 212, 0.22) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+
+  html.dark .btn-quiet {
+    background: rgba(15, 28, 41, 0.72);
+    color: #d7e4ef;
+  }
 
   .btn:disabled {
     opacity: 0.5;
@@ -752,6 +785,12 @@
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
   }
 
+  html.dark .panel-section {
+    background: linear-gradient(180deg, rgba(33, 48, 63, 0.96), rgba(21, 33, 46, 0.94));
+    border-color: rgba(151, 183, 212, 0.2);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
   .panel-section-tight {
     margin-top: 10px;
     padding: 14px;
@@ -772,6 +811,26 @@
     font-size: 13px;
     line-height: 1.45;
     color: var(--ink-soft);
+  }
+
+  html.dark .panel-intro,
+  html.dark .panel-subtitle,
+  html.dark .panel-section-label,
+  html.dark .panel-section-note,
+  html.dark .draft-note,
+  html.dark .chart-state,
+  html.dark .stat-lbl,
+  html.dark .loader-text,
+  html.dark .modal .modal-sub,
+  html.dark .modal .field-label,
+  html.dark .port-popup .coord,
+  html.dark .help-text code,
+  html.dark .leaflet-control-attribution {
+    color: #cad8e4 !important;
+  }
+
+  html.dark .help-text code {
+    background: rgba(255, 255, 255, 0.12);
   }
 
   .action-grid {
@@ -946,6 +1005,11 @@
     backdrop-filter: blur(18px);
   }
 
+  html.dark .modal {
+    background: linear-gradient(180deg, rgba(13, 24, 35, 0.98), rgba(9, 18, 28, 0.95));
+    border-color: rgba(151, 183, 212, 0.24);
+  }
+
   @keyframes slideUp {
     from { transform: translateY(15px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
@@ -981,6 +1045,19 @@
     transition: border-color 0.2s;
   }
   .modal input:focus { border-bottom-color: var(--accent); }
+
+  html.dark .modal input,
+  html.dark .modal select,
+  html.dark .modal textarea {
+    background: rgba(19, 32, 44, 0.9);
+    color: #edf3f8;
+  }
+
+  html.dark .modal input {
+    border-radius: 10px;
+    border: 1px solid rgba(151, 183, 212, 0.22);
+    border-bottom-width: 1px;
+  }
 
   .modal select {
     width: 100%;
