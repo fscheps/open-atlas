@@ -794,11 +794,8 @@
   body.exporting .charting,
   body.exporting .modal-backdrop,
   body.exporting .panel-toggle,
-  body.exporting .leaflet-control-container {
-    display: none !important;
-  }
-
-  body.exporting.export-map-only .control-panel {
+  body.exporting .leaflet-control-container,
+  body.exporting .control-panel {
     display: none !important;
   }
 

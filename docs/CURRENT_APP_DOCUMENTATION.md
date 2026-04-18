@@ -80,9 +80,9 @@ The project is intentionally:
 ### Export
 
 - PNG export with:
-  - map-only or studio-view layout
   - current-view or fit-atlas framing
   - standard, high, or ultra quality
+- direct clipboard copy of the current map view without the studio sidebar
 - GeoJSON export for interoperability
 
 ## State model

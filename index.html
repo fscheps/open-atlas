@@ -111,6 +111,10 @@
     <div class="panel-section-label">Save &amp; Share</div>
     <div class="panel-section-note">Export polished visuals or portable data files, then reload an atlas later for editing.</div>
     <div class="action-grid">
+      <button class="btn" id="copyViewBtn">
+        <i class="fa-solid fa-copy"></i>
+        Copy View
+      </button>
       <button class="btn" id="exportPngBtn">
         <i class="fa-solid fa-image"></i>
         Export PNG
@@ -249,20 +253,13 @@
     <div class="modal-sub" id="exportModalSub">Choose the framing and output quality.</div>
     <div class="settings-grid">
       <div class="settings-field">
-        <label for="exportScopeSelect">Layout</label>
-        <select id="exportScopeSelect">
-          <option value="map-only">Map Only</option>
-          <option value="studio">Studio View</option>
-        </select>
-      </div>
-      <div class="settings-field">
         <label for="exportAreaSelect">Framing</label>
         <select id="exportAreaSelect">
           <option value="current-view">Current View</option>
           <option value="fit-atlas">Fit Atlas Content</option>
         </select>
       </div>
-      <div class="settings-field full-span">
+      <div class="settings-field">
         <label for="exportQualitySelect">Quality</label>
         <select id="exportQualitySelect">
           <option value="high">High</option>
@@ -489,11 +486,20 @@
         <div class="help-title"><i class="fa-solid fa-image"></i> Exporting as PNG</div>
         <div class="help-text">
           • Click <strong>Export PNG</strong> in the Save &amp; Share section<br>
-          • Choose between <strong>Map Only</strong> and <strong>Studio View</strong> before rendering<br>
-          • Capture either the current viewport or automatically fit all ports and routes into frame<br>
+          • PNG exports now capture <strong>only the map view</strong>, without the studio sidebar<br>
+          • Capture either the current viewport or automatically fit all ports, labels, bubbles, and routes into frame<br>
           • Pick standard, high, or ultra output quality depending on how heavy you want the file to be<br>
           • The PNG is saved with a timestamp: <code>open-atlas-YYYY-MM-DD...</code><br>
           • High-resolution output suitable for printing or sharing
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-title"><i class="fa-solid fa-copy"></i> Copying the View</div>
+        <div class="help-text">
+          • Click <strong>Copy View</strong> to place the current map image directly on your clipboard<br>
+          • This uses the current viewport and excludes the studio sidebar by default<br>
+          • Use it for quick pasting into chat, notes, slides, or documents without downloading a file first
         </div>
       </div>
 

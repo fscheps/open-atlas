@@ -1990,6 +1990,7 @@
   confirmModal.addEventListener('click', (e) => { if (e.target === confirmModal) confirmModal.classList.remove('show'); });
 
   /* ===== Export / Import ===== */
+  const copyViewBtn = document.getElementById('copyViewBtn');
   const exportPngBtn = document.getElementById('exportPngBtn');
   const exportJsonBtn = document.getElementById('exportJsonBtn');
   const exportGeoJsonBtn = document.getElementById('exportGeoJsonBtn');
@@ -1998,7 +1999,6 @@
   const exportModal = document.getElementById('exportModal');
   const exportModalTitle = document.getElementById('exportModalTitle');
   const exportModalSub = document.getElementById('exportModalSub');
-  const exportScopeSelect = document.getElementById('exportScopeSelect');
   const exportAreaSelect = document.getElementById('exportAreaSelect');
   const exportQualitySelect = document.getElementById('exportQualitySelect');
   const exportTip = document.getElementById('exportTip');
@@ -2008,26 +2008,25 @@
   function setExportBusy(isBusy, title, sub) {
     exportModalTitle.textContent = title;
     exportModalSub.textContent = sub;
-    [exportScopeSelect, exportAreaSelect, exportQualitySelect, exportCloseBtn, exportConfirmBtn].forEach((el) => {
+    [exportAreaSelect, exportQualitySelect, exportCloseBtn, exportConfirmBtn].forEach((el) => {
       el.disabled = isBusy;
     });
   }
 
   function updateExportTip() {
-    const layoutLabel = exportScopeSelect.value === 'studio' ? 'the full studio view with the sidebar' : 'only the map canvas without UI chrome';
     const frameLabel = exportAreaSelect.value === 'fit-atlas'
-      ? 'The camera will temporarily frame all ports and routes before capture.'
+      ? 'The camera will temporarily frame all ports, labels, bubbles, and routes before capture.'
       : 'The PNG will match the exact viewport currently on screen.';
     const qualityLabel = exportQualitySelect.value === 'ultra'
       ? 'Ultra quality is best for print but creates the heaviest file.'
       : exportQualitySelect.value === 'standard'
         ? 'Standard quality keeps file size lighter for quick sharing.'
         : 'High quality is the recommended balance for most atlases.';
-    exportTip.textContent = `This export will capture ${layoutLabel}. ${frameLabel} ${qualityLabel}`;
+    exportTip.textContent = `This export captures only the map canvas without the studio sidebar. ${frameLabel} ${qualityLabel}`;
   }
 
   function openExportModal() {
-    setExportBusy(false, 'Export PNG', 'Choose the framing, layout, and output quality.');
+    setExportBusy(false, 'Export PNG', 'Choose the framing and output quality.');
     updateExportTip();
     exportModal.classList.add('show');
     refreshWorkflowState();
@@ -2066,6 +2065,7 @@
 
     markers.forEach((markerEntry) => {
       bounds.extend(markerEntry.latlng);
+      if (markerEntry.bubbleLatLng) bounds.extend(markerEntry.bubbleLatLng);
       hasContent = true;
     });
 
@@ -2077,6 +2077,49 @@
     });
 
     return hasContent ? bounds : null;
+  }
+
+  function getAtlasOverlayClientRects() {
+    const rects = [];
+    const pushRect = (el) => {
+      if (!el || !el.isConnected) return;
+      const rect = el.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+      rects.push(rect);
+    };
+
+    markers.forEach((entry) => {
+      pushRect(entry.marker.getElement());
+      const tooltip = entry.marker.getTooltip();
+      pushRect(tooltip && tooltip.getElement());
+      pushRect(entry.bubble && entry.bubble.getElement());
+    });
+
+    return rects;
+  }
+
+  async function nudgeViewToFitOverlayRects(margin) {
+    const mapRect = map.getContainer().getBoundingClientRect();
+    const overlayRects = getAtlasOverlayClientRects();
+    if (!overlayRects.length) return;
+
+    const minLeft = Math.min(...overlayRects.map((rect) => rect.left));
+    const maxRight = Math.max(...overlayRects.map((rect) => rect.right));
+    const minTop = Math.min(...overlayRects.map((rect) => rect.top));
+    const maxBottom = Math.max(...overlayRects.map((rect) => rect.bottom));
+
+    const leftOverflow = minLeft - (mapRect.left + margin);
+    const rightOverflow = maxRight - (mapRect.right - margin);
+    const topOverflow = minTop - (mapRect.top + margin);
+    const bottomOverflow = maxBottom - (mapRect.bottom - margin);
+
+    const dx = rightOverflow > 0 ? rightOverflow : (leftOverflow < 0 ? leftOverflow : 0);
+    const dy = bottomOverflow > 0 ? bottomOverflow : (topOverflow < 0 ? topOverflow : 0);
+
+    if (dx || dy) {
+      map.panBy([dx, dy], { animate: false });
+      await new Promise((resolve) => setTimeout(resolve, 160));
+    }
   }
 
   async function withPreparedExportFrame(frameMode, callback) {
@@ -2094,10 +2137,11 @@
         if (sw.lat === ne.lat && sw.lng === ne.lng) {
           map.setView(bounds.getCenter(), Math.max(map.getZoom(), 5), { animate: false });
         } else {
-          map.fitBounds(bounds.pad(0.16), { padding: [48, 48], animate: false, maxZoom: 6 });
+          map.fitBounds(bounds.pad(0.22), { padding: [112, 112], animate: false, maxZoom: 5 });
         }
         changedView = true;
-        await new Promise((resolve) => setTimeout(resolve, 180));
+        await new Promise((resolve) => setTimeout(resolve, 220));
+        await nudgeViewToFitOverlayRects(88);
       } else {
         showHint('No plotted atlas content yet, exporting the current view.');
       }
@@ -2111,6 +2155,35 @@
         map.invalidateSize(false);
       }
     }
+  }
+
+  async function renderMapCanvas(frameMode, quality) {
+    const exportQuality = quality || 'high';
+    const exportScale = EXPORT_QUALITY_SCALE[exportQuality] || EXPORT_QUALITY_SCALE.high;
+    map.closePopup();
+
+    return withPreparedExportFrame(frameMode, async () => {
+      document.body.classList.add('exporting');
+      await new Promise((resolve) => setTimeout(resolve, 180));
+
+      const target = document.getElementById('map');
+      const targetRect = target.getBoundingClientRect();
+      return html2canvas(target, {
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#ffffff',
+        logging: false,
+        scale: exportScale,
+        width: Math.ceil(targetRect.width),
+        height: Math.ceil(targetRect.height),
+        windowWidth: window.innerWidth,
+        windowHeight: window.innerHeight,
+        scrollX: 0,
+        scrollY: 0
+      });
+    }).finally(() => {
+      document.body.classList.remove('exporting');
+    });
   }
 
   function buildAtlasState(opts) {
@@ -2272,51 +2345,51 @@
       showHint('Export library unavailable.');
       return;
     }
-    const exportScope = exportScopeSelect.value;
     const exportArea = exportAreaSelect.value;
     const exportQuality = exportQualitySelect.value;
-    const exportScale = EXPORT_QUALITY_SCALE[exportQuality] || EXPORT_QUALITY_SCALE.high;
 
-    setExportBusy(true, 'Rendering PNG…', 'Preparing the selected frame and quality.');
-    map.closePopup();
+    setExportBusy(true, 'Rendering PNG…', 'Preparing the selected framing and quality.');
 
     try {
-      await withPreparedExportFrame(exportArea, async () => {
-        document.body.classList.add('exporting', exportScope === 'studio' ? 'export-studio' : 'export-map-only');
-        await new Promise((resolve) => setTimeout(resolve, 160));
+      const canvas = await renderMapCanvas(exportArea, exportQuality);
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('PNG blob generation failed');
 
-        const target = exportScope === 'studio' ? document.body : document.getElementById('map');
-        const targetRect = target.getBoundingClientRect();
-        const canvas = await html2canvas(target, {
-          useCORS: true,
-          allowTaint: false,
-          backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#ffffff',
-          logging: false,
-          scale: exportScale,
-          width: exportScope === 'studio' ? window.innerWidth : Math.ceil(targetRect.width),
-          height: exportScope === 'studio' ? window.innerHeight : Math.ceil(targetRect.height),
-          windowWidth: window.innerWidth,
-          windowHeight: window.innerHeight,
-          scrollX: 0,
-          scrollY: 0
-        });
-
-        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
-        if (!blob) throw new Error('PNG blob generation failed');
-
-        const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-        const filenameBase = slugifyFilename(settings.atlasTitle || 'open-atlas');
-        triggerDownload(blob, `${filenameBase}-${ts}.png`);
-      });
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const filenameBase = slugifyFilename(settings.atlasTitle || 'open-atlas');
+      triggerDownload(blob, `${filenameBase}-${ts}.png`);
 
       closeExportModal();
-      showHint(`PNG exported: ${exportScope === 'studio' ? 'studio view' : 'map only'}, ${exportQuality} quality.`);
+      showHint(`PNG exported: map only, ${exportQuality} quality.`);
     } catch (err) {
       console.error('PNG export error', err);
       showHint('PNG export failed — check console.');
-      setExportBusy(false, 'Export PNG', 'Choose the framing, layout, and output quality.');
+      setExportBusy(false, 'Export PNG', 'Choose the framing and output quality.');
+    }
+  }
+
+  async function copyCurrentViewToClipboard() {
+    if (typeof html2canvas === 'undefined') {
+      showHint('Copy preview unavailable.');
+      return;
+    }
+    if (!navigator.clipboard || typeof navigator.clipboard.write !== 'function' || typeof ClipboardItem === 'undefined') {
+      showHint('Clipboard image copy is not supported in this browser.');
+      return;
+    }
+
+    copyViewBtn.disabled = true;
+    try {
+      const canvas = await renderMapCanvas('current-view', 'high');
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('Clipboard PNG blob generation failed');
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      showHint('Current map view copied to clipboard.');
+    } catch (err) {
+      console.error('Clipboard copy error', err);
+      showHint('Copy failed — your browser may block image clipboard access.');
     } finally {
-      document.body.classList.remove('exporting', 'export-studio', 'export-map-only');
+      copyViewBtn.disabled = false;
     }
   }
 
@@ -2373,6 +2446,7 @@
   }
 
   exportPngBtn.addEventListener('click', openExportModal);
+  copyViewBtn.addEventListener('click', copyCurrentViewToClipboard);
   exportJsonBtn.addEventListener('click', exportJSON);
   exportGeoJsonBtn.addEventListener('click', exportGeoJSON);
   importJsonBtn.addEventListener('click', () => jsonFileInput.click());
@@ -2385,7 +2459,7 @@
   exportModal.addEventListener('click', (e) => {
     if (e.target === exportModal) closeExportModal();
   });
-  [exportScopeSelect, exportAreaSelect, exportQualitySelect].forEach((el) => {
+  [exportAreaSelect, exportQualitySelect].forEach((el) => {
     el.addEventListener('change', updateExportTip);
   });
   jsonFileInput.addEventListener('change', (e) => {
