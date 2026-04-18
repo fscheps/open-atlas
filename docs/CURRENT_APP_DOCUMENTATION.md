@@ -99,17 +99,17 @@ The editable atlas export shape currently includes:
     "zoom": 3
   },
   "settings": {
-    "atlasTitle": "Mariner's Atlas",
-    "atlasSubtitle": "Route Cartographer",
-    "themeMode": "auto",
-    "mapStyle": "voyager_labels_under",
-    "displayFont": "cormorant",
-    "bodyFont": "cormorant",
-    "uiFont": "jetbrains",
-    "accentColor": "#8b2e1f",
-    "markerColor": "#8b2e1f",
-    "routeColor": "#1a4a6e",
-    "routeAltColor": "#8b2e1f"
+    "atlasTitle": "Open Atlas",
+    "atlasSubtitle": "Map Studio",
+    "themeMode": "light",
+    "mapStyle": "positron",
+    "displayFont": "fraunces",
+    "bodyFont": "manrope",
+    "uiFont": "ibmplexmono",
+    "accentColor": "#18567a",
+    "markerColor": "#0b7a75",
+    "routeColor": "#18567a",
+    "routeAltColor": "#ca6702"
   },
   "ports": [],
   "routes": []

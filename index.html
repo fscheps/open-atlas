@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="en"><head><meta name="x-poe-datastore-behavior" content="local_only"><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://basemaps.cartocdn.com https://cdnjs.cloudflare.com https://unpkg.com https://i.imgur.com https://images.unsplash.com https://picsum.photos; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mariner's Atlas — Ship Route Tracker</title>
+<title>Open Atlas — Map Studio</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&family=JetBrains+Mono:wght@400;600&family=Manrope:wght@500;700&family=IBM+Plex+Mono:wght@400;600&family=Playfair+Display:wght@600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
@@ -27,7 +27,7 @@
     <line x1="4" y1="50" x2="14" y2="50"></line>
     <line x1="86" y1="50" x2="96" y2="50"></line>
   </svg>
-  <div class="loader-title" id="loaderTitle">Mariner's Atlas</div>
+  <div class="loader-title" id="loaderTitle">Open Atlas</div>
   <div class="loader-text" id="loaderText">Loading sea charts…</div>
 </div>
 
@@ -44,8 +44,8 @@
       <line x1="86" y1="50" x2="96" y2="50"></line>
     </svg>
     <div>
-      <div class="panel-title" id="atlasTitleText">Mariner's Atlas</div>
-      <div class="panel-subtitle" id="atlasSubtitleText">Route Cartographer</div>
+      <div class="panel-title" id="atlasTitleText">Open Atlas</div>
+      <div class="panel-subtitle" id="atlasSubtitleText">Map Studio</div>
     </div>
   </div>
 
@@ -284,11 +284,11 @@
     <div class="settings-grid full">
       <div class="settings-field">
         <label for="settingsTitleInput">Atlas Title</label>
-        <input id="settingsTitleInput" type="text" placeholder="Mariner's Atlas" autocomplete="off">
+        <input id="settingsTitleInput" type="text" placeholder="Open Atlas" autocomplete="off">
       </div>
       <div class="settings-field">
         <label for="settingsSubtitleInput">Atlas Subtitle</label>
-        <input id="settingsSubtitleInput" type="text" placeholder="Route Cartographer" autocomplete="off">
+        <input id="settingsSubtitleInput" type="text" placeholder="Map Studio" autocomplete="off">
       </div>
     </div>
 
@@ -367,7 +367,7 @@
 <!-- Help/FAQ modal -->
 <div class="modal-backdrop" id="helpModal">
   <div class="modal" style="max-width: 600px;">
-    <h3>Mariner's Atlas — Guide</h3>
+    <h3>Open Atlas — Guide</h3>
     <div class="modal-sub">Quick reference for navigating the atlas</div>
 
     <div style="margin-top: 20px; max-height: 60vh; overflow-y: auto; padding-right: 8px;">
