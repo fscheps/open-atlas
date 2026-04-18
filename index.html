@@ -189,6 +189,11 @@
     <h3>Name this Port</h3>
     <div class="modal-sub">Lat <span id="modalLat">—</span> • Lng <span id="modalLng">—</span></div>
     <input id="portNameInput" type="text" placeholder="e.g. Port of Lisbon" autocomplete="off">
+    <span class="field-label">Point Icon</span>
+    <div class="icon-picker-grid" id="nameIconPicker"></div>
+
+    <span class="field-label">Point Color</span>
+    <div class="color-picker-grid" id="nameColorPicker"></div>
     <div class="modal-actions">
       <button class="btn" id="modalCancel" style="background:transparent; color:var(--ink-soft);">
         <i class="fa-solid fa-xmark"></i> Cancel
@@ -208,6 +213,12 @@
 
     <span class="field-label">Port Name</span>
     <input id="portEditName" type="text" autocomplete="off">
+
+    <span class="field-label">Point Icon</span>
+    <div class="icon-picker-grid" id="portEditIconPicker"></div>
+
+    <span class="field-label">Point Color</span>
+    <div class="color-picker-grid" id="portEditColorPicker"></div>
 
     <span class="field-label">Notes &amp; Cargo</span>
     <textarea id="portEditDetails" placeholder="Logbook notes, cargo manifest, weather, hazards…"></textarea>
@@ -433,6 +444,7 @@
         <div class="help-text">
           • Click anywhere on the map to anchor a new port<br>
           • Enter a name in the dialog (or leave blank for auto-numbering)<br>
+          • Choose a point icon and color while creating the point, or refine them later in details<br>
           • Ports display with permanent labels showing their names<br>
           • Click any port to edit its details, add notes, or delete it
         </div>
@@ -456,7 +468,7 @@
           • Click any port to open its details<br>
           • Add notes in the "Notes &amp; Cargo" field (cargo manifest, hazards, weather, etc.)<br>
           • Check <strong>"Display info bubble on map"</strong> to show a callout<br>
-          • The bubble appears as a draggable speech balloon connected to the port<br>
+          • The bubble appears as a draggable callout anchored back to the point so it reads like an annotation, not a floating card<br>
           • <strong>Drag the bubble</strong> to reposition it anywhere on the map<br>
           • Uncheck the box and save to hide the bubble
         </div>
@@ -489,7 +501,7 @@
         <div class="help-title"><i class="fa-solid fa-file-export"></i> Exporting as JSON</div>
         <div class="help-text">
           • Click <strong>Export JSON</strong> to save your entire atlas<br>
-          • The JSON file includes all ports (names, coordinates, notes, bubble positions), all routes (exact paths, distances), and the current map view<br>
+          • The JSON file includes all ports (names, coordinates, notes, icons, colors, bubble positions), all routes (exact paths, distances), and the current map view<br>
           • Save this file to back up your work or share it with others<br>
           • Filename format: <code>open-atlas-YYYY-MM-DD...</code>
         </div>

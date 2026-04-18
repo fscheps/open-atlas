@@ -31,6 +31,8 @@
 
   map.createPane('presentationLand');
   map.getPane('presentationLand').style.zIndex = 250;
+  map.createPane('bubbleConnectors');
+  map.getPane('bubbleConnectors').style.zIndex = 430;
 
   function refreshPresentationLayerStyle() {
     if (!presentationLandLayer) return;
@@ -116,6 +118,8 @@
   const portNameInput = document.getElementById('portNameInput');
   const modalLat = document.getElementById('modalLat');
   const modalLng = document.getElementById('modalLng');
+  const nameIconPicker = document.getElementById('nameIconPicker');
+  const nameColorPicker = document.getElementById('nameColorPicker');
   const modalSave = document.getElementById('modalSave');
   const modalCancel = document.getElementById('modalCancel');
 
@@ -199,6 +203,26 @@
     jetbrains: 'JetBrains Mono',
     ibmplexmono: 'IBM Plex Mono'
   };
+  const POINT_ICON_OPTIONS = [
+    { key: 'anchor', label: 'Anchor', iconClass: 'fa-anchor' },
+    { key: 'location', label: 'Pin', iconClass: 'fa-location-dot' },
+    { key: 'ship', label: 'Ship', iconClass: 'fa-ship' },
+    { key: 'plane', label: 'Plane', iconClass: 'fa-plane' },
+    { key: 'flag', label: 'Flag', iconClass: 'fa-flag' },
+    { key: 'building', label: 'City', iconClass: 'fa-building' },
+    { key: 'star', label: 'Star', iconClass: 'fa-star' },
+    { key: 'mountain', label: 'Landmark', iconClass: 'fa-mountain-sun' }
+  ];
+  const POINT_COLOR_OPTIONS = [
+    '#0b7a75',
+    '#18567a',
+    '#ca6702',
+    '#8b2e1f',
+    '#3f7d4c',
+    '#6b4f2a',
+    '#355070',
+    '#d1495b'
+  ];
   const THEME_PRESETS = {
     mariner: {
       label: 'Mariner',
@@ -273,6 +297,11 @@
     landColor: '#f7f4ea'
   };
   let settings = { ...DEFAULT_SETTINGS };
+  let pendingPointStyle = {
+    iconKey: 'anchor',
+    markerColor: DEFAULT_SETTINGS.markerColor
+  };
+  let editingPointStyle = null;
   let draftSaveTimer = null;
   let autosaveSuspended = 0;
   let storedDraft = null;
@@ -329,6 +358,26 @@
   function rgbaFromHex(hex, alpha) {
     const { r, g, b } = hexToRgb(hex);
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  function normalizePointIcon(iconKey) {
+    return POINT_ICON_OPTIONS.some((option) => option.key === iconKey) ? iconKey : 'anchor';
+  }
+
+  function normalizePointColor(color) {
+    return /^#[0-9a-f]{6}$/i.test(String(color || '')) ? String(color) : settings.markerColor || DEFAULT_SETTINGS.markerColor;
+  }
+
+  function getPointIcon(iconKey) {
+    return POINT_ICON_OPTIONS.find((option) => option.key === normalizePointIcon(iconKey)) || POINT_ICON_OPTIONS[0];
+  }
+
+  function buildPointStyle(style) {
+    const source = style || {};
+    return {
+      iconKey: normalizePointIcon(source.iconKey),
+      markerColor: normalizePointColor(source.markerColor)
+    };
   }
 
   function loadStoredSettings() {
@@ -658,8 +707,53 @@
       : 'Tile basemaps keep geographic labels while your overlays inherit the palette and type choices.';
   }
 
+  function renderIconPicker(container, selectedIconKey, onSelect) {
+    const activeIcon = normalizePointIcon(selectedIconKey);
+    container.innerHTML = POINT_ICON_OPTIONS.map((option) => `
+      <button class="icon-choice${option.key === activeIcon ? ' is-selected' : ''}" type="button" data-icon-key="${option.key}" aria-label="${option.label}" title="${option.label}">
+        <i class="fa-solid ${option.iconClass}"></i>
+      </button>
+    `).join('');
+    container.querySelectorAll('[data-icon-key]').forEach((button) => {
+      button.addEventListener('click', () => onSelect(button.dataset.iconKey));
+    });
+  }
+
+  function renderColorPicker(container, selectedColor, onSelect) {
+    const activeColor = normalizePointColor(selectedColor);
+    container.innerHTML = POINT_COLOR_OPTIONS.map((color) => `
+      <button class="color-choice${color.toLowerCase() === activeColor.toLowerCase() ? ' is-selected' : ''}" type="button" data-color-value="${color}" aria-label="Select ${color} marker color" title="${color}" style="background:${color};"></button>
+    `).join('');
+    container.querySelectorAll('[data-color-value]').forEach((button) => {
+      button.addEventListener('click', () => onSelect(button.dataset.colorValue));
+    });
+  }
+
+  function refreshPendingPointStyleUi() {
+    renderIconPicker(nameIconPicker, pendingPointStyle.iconKey, (iconKey) => {
+      pendingPointStyle.iconKey = iconKey;
+      refreshPendingPointStyleUi();
+    });
+    renderColorPicker(nameColorPicker, pendingPointStyle.markerColor, (markerColor) => {
+      pendingPointStyle.markerColor = markerColor;
+      refreshPendingPointStyleUi();
+    });
+  }
+
+  function refreshEditingPointStyleUi() {
+    renderIconPicker(portEditIconPicker, editingPointStyle.iconKey, (iconKey) => {
+      editingPointStyle.iconKey = iconKey;
+      refreshEditingPointStyleUi();
+    });
+    renderColorPicker(portEditColorPicker, editingPointStyle.markerColor, (markerColor) => {
+      editingPointStyle.markerColor = markerColor;
+      refreshEditingPointStyleUi();
+    });
+  }
+
   function applySettings(nextSettings, opts) {
     const options = opts || {};
+    const previousSettings = { ...settings };
     settings = { ...settings, ...nextSettings };
     refreshThemeMode();
     document.documentElement.style.setProperty('--font-display', FONT_STACKS[settings.displayFont] || FONT_STACKS.cormorant);
@@ -674,6 +768,14 @@
     document.documentElement.style.setProperty('--route-glow', rgbaFromHex(settings.routeColor, 0.4));
     document.documentElement.style.setProperty('--sea-color', settings.seaColor);
     document.documentElement.style.setProperty('--land-color', settings.landColor);
+    if (nextSettings.markerColor && nextSettings.markerColor !== previousSettings.markerColor) {
+      markers.forEach((entry) => {
+        if (normalizePointColor(entry.markerColor).toLowerCase() === previousSettings.markerColor.toLowerCase()) {
+          entry.markerColor = nextSettings.markerColor;
+          updateMarkerAppearance(entry);
+        }
+      });
+    }
     atlasTitleText.textContent = settings.atlasTitle;
     atlasSubtitleText.textContent = settings.atlasSubtitle;
     loaderTitle.textContent = settings.atlasTitle;
@@ -703,14 +805,24 @@
   }
 
   /* ===== Ports ===== */
-  function makeIcon() {
+  function makeIcon(style) {
+    const pointStyle = buildPointStyle(style);
+    const icon = getPointIcon(pointStyle.iconKey);
     return L.divIcon({
       className: 'port-marker',
-      html: '<div class="port-marker-inner"><i class="fa-solid fa-anchor"></i></div>',
+      html: `<div class="port-marker-inner" style="--point-fill:${pointStyle.markerColor}"><i class="fa-solid ${icon.iconClass}"></i></div>`,
       iconSize: [28, 28],
       iconAnchor: [14, 28],
       popupAnchor: [0, -28]
     });
+  }
+
+  function updateMarkerAppearance(entry) {
+    entry.marker.setIcon(makeIcon(entry));
+    if (entry.bubbleVisible) {
+      updateBubbleContent(entry);
+      refreshBubbleConnector(entry);
+    }
   }
 
   function openNameModal(latlng) {
@@ -718,6 +830,11 @@
     modalLat.textContent = latlng.lat.toFixed(3);
     modalLng.textContent = latlng.lng.toFixed(3);
     portNameInput.value = '';
+    pendingPointStyle = {
+      iconKey: 'anchor',
+      markerColor: settings.markerColor
+    };
+    refreshPendingPointStyleUi();
     nameModal.classList.add('show');
     setTimeout(() => portNameInput.focus(), 60);
   }
@@ -728,7 +845,7 @@
   function savePort() {
     if (!pendingLatLng) return;
     const name = (portNameInput.value || '').trim() || `Port ${nextId}`;
-    addMarker(pendingLatLng, name);
+    addMarker(pendingLatLng, name, pendingPointStyle);
     closeNameModal();
   }
 
@@ -736,7 +853,8 @@
     opts = opts || {};
     const id = opts.id || nextId++;
     if (id >= nextId) nextId = id + 1;
-    const marker = L.marker(latlng, { icon: makeIcon() }).addTo(map);
+    const pointStyle = buildPointStyle(opts);
+    const marker = L.marker(latlng, { icon: makeIcon(pointStyle) }).addTo(map);
     // Permanent label
     marker.bindTooltip(name, {
       permanent: true,
@@ -748,6 +866,8 @@
     const entry = {
       id, marker, name,
       latlng: L.latLng(latlng.lat, latlng.lng),
+      iconKey: pointStyle.iconKey,
+      markerColor: pointStyle.markerColor,
       details: opts.details || '',
       bubbleVisible: false,
       bubbleLatLng: opts.bubbleLatLng ? L.latLng(opts.bubbleLatLng.lat, opts.bubbleLatLng.lng) : null,
@@ -776,6 +896,8 @@
   const portModalTitle = document.getElementById('portModalTitle');
   const portModalSub = document.getElementById('portModalSub');
   const portEditName = document.getElementById('portEditName');
+  const portEditIconPicker = document.getElementById('portEditIconPicker');
+  const portEditColorPicker = document.getElementById('portEditColorPicker');
   const portEditDetails = document.getElementById('portEditDetails');
   const bubbleToggle = document.getElementById('bubbleToggle');
   const portSaveBtn = document.getElementById('portSaveBtn');
@@ -785,9 +907,14 @@
 
   function openPortModal(entry) {
     editingPort = entry;
+    editingPointStyle = {
+      iconKey: entry.iconKey,
+      markerColor: entry.markerColor
+    };
     portModalTitle.textContent = entry.name;
     portModalSub.textContent = `${entry.latlng.lat.toFixed(3)}° • ${entry.latlng.lng.toFixed(3)}°`;
     portEditName.value = entry.name;
+    refreshEditingPointStyleUi();
     portEditDetails.value = entry.details || '';
     bubbleToggle.checked = !!entry.bubbleVisible;
     portModal.classList.add('show');
@@ -797,6 +924,7 @@
   function closePortModal() {
     portModal.classList.remove('show');
     editingPort = null;
+    editingPointStyle = null;
   }
 
   function savePortEdits() {
@@ -804,6 +932,8 @@
     const newName = (portEditName.value || '').trim() || editingPort.name;
     const newDetails = portEditDetails.value || '';
     const wantBubble = bubbleToggle.checked;
+    editingPort.iconKey = normalizePointIcon(editingPointStyle.iconKey);
+    editingPort.markerColor = normalizePointColor(editingPointStyle.markerColor);
 
     const renamed = newName !== editingPort.name;
     editingPort.name = newName;
@@ -816,6 +946,8 @@
       });
       refreshRouteLayers();
     }
+
+    updateMarkerAppearance(editingPort);
 
     if (wantBubble) {
       if (!editingPort.bubbleVisible) showBubble(editingPort);
@@ -851,22 +983,60 @@
   /* ===== Info bubble ===== */
   function defaultBubbleLatLng(portLatLng) {
     const bounds = map.getBounds();
-    const latSpan = Math.max(0.3, (bounds.getNorth() - bounds.getSouth()) * 0.12);
-    const lngSpan = Math.max(0.3, (bounds.getEast() - bounds.getWest()) * 0.12);
-    return L.latLng(portLatLng.lat + latSpan, portLatLng.lng + lngSpan);
+    const latSpan = Math.max(0.3, (bounds.getNorth() - bounds.getSouth()) * 0.08);
+    const lngSpan = Math.max(0.4, (bounds.getEast() - bounds.getWest()) * 0.08);
+    const bubbleToRight = portLatLng.lng <= map.getCenter().lng;
+    return L.latLng(
+      portLatLng.lat + latSpan * 0.9,
+      portLatLng.lng + lngSpan * (bubbleToRight ? 1.6 : -1.6)
+    );
   }
 
-  function makeBubbleIcon(name, details) {
+  function getBubbleAlignment(entry) {
+    return entry.bubbleLatLng && entry.bubbleLatLng.lng < entry.latlng.lng ? 'left' : 'right';
+  }
+
+  function makeBubbleIcon(entry) {
+    const { name, details } = entry;
     const safeDetails = escapeHtml(details || '').trim() || '<em style="opacity:.6">No details yet</em>';
+    const bubbleAccent = normalizePointColor(entry.markerColor);
+    const alignmentClass = getBubbleAlignment(entry) === 'left' ? 'align-left' : 'align-right';
     return L.divIcon({
       className: 'bubble-marker',
-      html: `<div class="info-bubble">
-               <div class="bubble-title">${escapeHtml(name)}</div>
-               <div class="bubble-handle"><i class="fa-solid fa-up-down-left-right"></i></div>
-               <div class="bubble-body">${safeDetails}</div>
+      html: `<div class="bubble-shell ${alignmentClass}" style="--bubble-accent:${bubbleAccent}">
+               <div class="bubble-tip-dot"></div>
+               <div class="info-bubble">
+                 <div class="bubble-title">${escapeHtml(name)}</div>
+                 <div class="bubble-handle"><i class="fa-solid fa-up-down-left-right"></i></div>
+                 <div class="bubble-body">${safeDetails}</div>
+               </div>
              </div>`,
       iconSize: null,
       iconAnchor: [0, 0]
+    });
+  }
+
+  function ensureBubbleConnector(entry) {
+    if (!entry.bubbleLatLng) return;
+    if (!entry.bubbleLine) {
+      entry.bubbleLine = L.polyline([entry.latlng, entry.bubbleLatLng], {
+        pane: 'bubbleConnectors',
+        color: rgbaFromHex(entry.markerColor, 0.68),
+        weight: 2,
+        opacity: 0.95,
+        interactive: false,
+        lineCap: 'round'
+      }).addTo(map);
+      return;
+    }
+    refreshBubbleConnector(entry);
+  }
+
+  function refreshBubbleConnector(entry) {
+    if (!entry.bubbleLine || !entry.bubbleLatLng) return;
+    entry.bubbleLine.setLatLngs([entry.latlng, entry.bubbleLatLng]);
+    entry.bubbleLine.setStyle({
+      color: rgbaFromHex(entry.markerColor, 0.68)
     });
   }
 
@@ -874,9 +1044,10 @@
     if (entry.bubble) return;
     if (!entry.bubbleLatLng) entry.bubbleLatLng = defaultBubbleLatLng(entry.latlng);
     entry.bubbleVisible = true;
+    ensureBubbleConnector(entry);
 
     const bubble = L.marker(entry.bubbleLatLng, {
-      icon: makeBubbleIcon(entry.name, entry.details),
+      icon: makeBubbleIcon(entry),
       draggable: true,
       autoPan: false,
       zIndexOffset: 500
@@ -884,6 +1055,8 @@
 
     bubble.on('drag', () => {
       entry.bubbleLatLng = bubble.getLatLng();
+      bubble.setIcon(makeBubbleIcon(entry));
+      refreshBubbleConnector(entry);
     });
     bubble.on('dragend', () => {
       scheduleDraftSave();
@@ -892,12 +1065,12 @@
     bubble.on('click', (ev) => { L.DomEvent.stopPropagation(ev); });
 
     entry.bubble = bubble;
-    entry.bubbleLine = null;
   }
 
   function updateBubbleContent(entry) {
     if (!entry.bubble) return;
-    entry.bubble.setIcon(makeBubbleIcon(entry.name, entry.details));
+    entry.bubble.setIcon(makeBubbleIcon(entry));
+    refreshBubbleConnector(entry);
   }
 
   function hideBubble(entry) {
@@ -906,7 +1079,10 @@
       map.removeLayer(entry.bubble);
       entry.bubble = null;
     }
-    entry.bubbleLine = null;
+    if (entry.bubbleLine) {
+      map.removeLayer(entry.bubbleLine);
+      entry.bubbleLine = null;
+    }
   }
 
   portSaveBtn.addEventListener('click', savePortEdits);
@@ -1952,6 +2128,8 @@
         name: m.name,
         lat: m.latlng.lat,
         lng: m.latlng.lng,
+        iconKey: m.iconKey,
+        markerColor: m.markerColor,
         details: m.details || '',
         bubbleVisible: !!m.bubbleVisible,
         bubbleLat: m.bubbleLatLng ? m.bubbleLatLng.lat : null,
@@ -1991,6 +2169,8 @@
           const latlng = L.latLng(p.lat, p.lng);
           const entry = addMarker(latlng, p.name || 'Port', {
             id: p.id,
+            iconKey: p.iconKey,
+            markerColor: p.markerColor,
             details: p.details || '',
             bubbleVisible: !!p.bubbleVisible,
             bubbleLatLng: (p.bubbleLat != null && p.bubbleLng != null)
@@ -2059,6 +2239,8 @@
             featureType: 'port',
             id: port.id,
             name: port.name,
+            iconKey: port.iconKey,
+            markerColor: port.markerColor,
             details: port.details,
             bubbleVisible: port.bubbleVisible,
             bubbleLat: port.bubbleLat,

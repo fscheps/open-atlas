@@ -42,6 +42,7 @@ The project is intentionally:
 
 - Add locations by clicking the map
 - Edit names and notes
+- Choose per-point icons and colors
 - Toggle draggable info bubbles
 - Search ports by name or notes
 - Measure straight-line distance
@@ -121,7 +122,20 @@ The editable atlas export shape currently includes:
     "seaColor": "#d7e7f1",
     "landColor": "#f7f4ea"
   },
-  "ports": [],
+  "ports": [
+    {
+      "id": 1,
+      "name": "Port of Lisbon",
+      "lat": 38.722,
+      "lng": -9.139,
+      "iconKey": "anchor",
+      "markerColor": "#0b7a75",
+      "details": "",
+      "bubbleVisible": false,
+      "bubbleLat": null,
+      "bubbleLng": null
+    }
+  ],
   "routes": []
 }
 ```

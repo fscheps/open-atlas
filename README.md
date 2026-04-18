@@ -8,6 +8,7 @@ Open Atlas is a static, open-source maritime route-mapping app built for easy sh
 
 - Place ports directly on the map
 - Draw sea routes that avoid land using client-side pathfinding
+- Choose point icons and per-point colors for clearer map storytelling
 - Save and reopen atlases as JSON for continued editing
 - Autosave local drafts and restore them later from the control panel
 - Undo and redo atlas changes in the browser
