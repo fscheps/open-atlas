@@ -14,6 +14,7 @@ This repository aims to stay transparent about every third-party component used 
 | Google Fonts families | Google Fonts stylesheet in `index.html` | Typography for title, body, and UI fonts | Candidate for self-hosting |
 | world-atlas land dataset | Remote fetch in `assets/scripts/app.js` | 110m world land polygons used to build the sea/land grid | Candidate for vendoring into `assets/data/` |
 | CARTO raster tiles | Remote tile URLs in `assets/scripts/app.js` | Basemap imagery | External service, not vendored code |
+| OpenStreetMap Nominatim | Remote fetch in `assets/scripts/app.js` | On-demand place search for adding locations by city, airport, port, or landmark name | Shared public service; no client-side autocomplete, cache repeat queries, and keep attribution visible |
 
 ## Transparency goals
 

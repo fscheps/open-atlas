@@ -112,6 +112,7 @@
   const loaderTitle = document.getElementById('loaderTitle');
   const charting = document.getElementById('charting');
   const findPortBtn = document.getElementById('findPortBtn');
+  const placeSearchBtn = document.getElementById('placeSearchBtn');
   const measureBtn = document.getElementById('measureBtn');
   const measureLabel = document.getElementById('measureLabel');
   const atlasTitleText = document.getElementById('atlasTitleText');
@@ -135,6 +136,7 @@
   const nameModal = document.getElementById('nameModal');
   const nameModalTitle = document.getElementById('nameModalTitle');
   const portNameInput = document.getElementById('portNameInput');
+  const pointTypeInput = document.getElementById('pointTypeInput');
   const modalLat = document.getElementById('modalLat');
   const modalLng = document.getElementById('modalLng');
   const nameIconPicker = document.getElementById('nameIconPicker');
@@ -153,6 +155,15 @@
   const portSearchInput = document.getElementById('portSearchInput');
   const portSearchResults = document.getElementById('portSearchResults');
   const searchCloseBtn = document.getElementById('searchCloseBtn');
+
+  const placeModal = document.getElementById('placeModal');
+  const placeModalTitle = document.getElementById('placeModalTitle');
+  const placeModalSub = document.getElementById('placeModalSub');
+  const placeSearchInput = document.getElementById('placeSearchInput');
+  const placeTypeFilterSelect = document.getElementById('placeTypeFilterSelect');
+  const placeSearchResults = document.getElementById('placeSearchResults');
+  const placeSearchSubmitBtn = document.getElementById('placeSearchSubmitBtn');
+  const placeCloseBtn = document.getElementById('placeCloseBtn');
 
   const confirmModal = document.getElementById('confirmModal');
   const confirmOk = document.getElementById('confirmOk');
@@ -201,7 +212,7 @@
   const ATLAS_FORMAT = 'open-atlas';
   const LEGACY_ATLAS_FORMAT = 'mariners-atlas';
   const ATLAS_GEOJSON_FORMAT = 'open-atlas-geojson';
-  const ATLAS_VERSION = 6;
+  const ATLAS_VERSION = 7;
   const SETTINGS_STORAGE_KEY = 'open-atlas-settings-v2';
   const LEGACY_SETTINGS_STORAGE_KEY = 'mariners-atlas-settings-v1';
   const DRAFT_STORAGE_KEY = 'open-atlas-draft-v2';
@@ -244,6 +255,12 @@
     { key: 'building', label: 'City', iconClass: 'fa-building' },
     { key: 'star', label: 'Star', iconClass: 'fa-star' },
     { key: 'mountain', label: 'Landmark', iconClass: 'fa-mountain-sun' }
+  ];
+  const POINT_TYPE_OPTIONS = [
+    { key: 'port', label: 'Port', defaultIconKey: 'anchor' },
+    { key: 'city', label: 'City', defaultIconKey: 'building' },
+    { key: 'airport', label: 'Airport', defaultIconKey: 'plane' },
+    { key: 'location', label: 'Location', defaultIconKey: 'location' }
   ];
   const POINT_COLOR_OPTIONS = [
     '#0b7a75',
@@ -341,6 +358,7 @@
   };
   let settings = { ...DEFAULT_SETTINGS };
   let pendingPointStyle = {
+    pointType: 'port',
     iconKey: 'anchor',
     markerColor: DEFAULT_SETTINGS.markerColor
   };
@@ -357,6 +375,9 @@
   const ATLAS_MODES = ['maritime', 'pins', 'connections'];
   const CALLOUT_STYLES = ['subtle', 'editorial', 'bold'];
   const CONNECTION_STYLES = ['straight', 'arc'];
+  const POINT_TYPES = POINT_TYPE_OPTIONS.map((option) => option.key);
+  const PLACE_SEARCH_ENDPOINT = 'https://nominatim.openstreetmap.org/search';
+  const placeSearchCache = new Map();
 
   function updateStats() {
     portCountEl.textContent = markers.length;
@@ -411,6 +432,10 @@
     return POINT_ICON_OPTIONS.some((option) => option.key === iconKey) ? iconKey : 'anchor';
   }
 
+  function normalizePointType(pointType) {
+    return POINT_TYPES.includes(pointType) ? pointType : getDefaultPointType();
+  }
+
   function normalizePointColor(color) {
     return /^#[0-9a-f]{6}$/i.test(String(color || '')) ? String(color) : settings.markerColor || DEFAULT_SETTINGS.markerColor;
   }
@@ -425,6 +450,40 @@
 
   function normalizeConnectionStyle(style) {
     return CONNECTION_STYLES.includes(style) ? style : DEFAULT_SETTINGS.connectionStyle;
+  }
+
+  function getDefaultPointType(mode) {
+    return normalizeAtlasMode(mode || settings.atlasMode) === 'maritime' ? 'port' : 'location';
+  }
+
+  function getPointTypeMeta(pointType) {
+    return POINT_TYPE_OPTIONS.find((option) => option.key === normalizePointType(pointType)) || POINT_TYPE_OPTIONS[POINT_TYPE_OPTIONS.length - 1];
+  }
+
+  function getSuggestedIconKeyForType(pointType) {
+    return getPointTypeMeta(pointType).defaultIconKey;
+  }
+
+  function maybeApplySuggestedIcon(styleState, nextType) {
+    if (!styleState) return;
+    const previousSuggested = getSuggestedIconKeyForType(styleState.pointType);
+    if (!styleState.iconKey || styleState.iconKey === previousSuggested) {
+      styleState.iconKey = getSuggestedIconKeyForType(nextType);
+    }
+    styleState.pointType = normalizePointType(nextType);
+  }
+
+  function inferPointTypeFromPlaceResult(result) {
+    const raw = [
+      result && result.class,
+      result && result.type,
+      result && result.addresstype,
+      result && result.category
+    ].join(' ').toLowerCase();
+    if (/airport|aerodrome|airfield/.test(raw)) return 'airport';
+    if (/harbour|harbor|port|marina|dock|pier/.test(raw)) return 'port';
+    if (/city|town|village|municipality|suburb|hamlet/.test(raw)) return 'city';
+    return getDefaultPointType();
   }
 
   function getAtlasMode() {
@@ -523,9 +582,17 @@
   function buildPointStyle(style) {
     const source = style || {};
     return {
+      pointType: normalizePointType(source.pointType),
       iconKey: normalizePointIcon(source.iconKey),
       markerColor: normalizePointColor(source.markerColor)
     };
+  }
+
+  function populatePointTypeSelect(selectEl) {
+    if (!selectEl) return;
+    selectEl.innerHTML = POINT_TYPE_OPTIONS.map((option) => (
+      `<option value="${option.key}">${option.label}</option>`
+    )).join('');
   }
 
   function normalizeBubbleWidth(value) {
@@ -978,6 +1045,7 @@
   }
 
   function refreshPendingPointStyleUi() {
+    if (pointTypeInput) pointTypeInput.value = normalizePointType(pendingPointStyle.pointType);
     renderIconPicker(nameIconPicker, pendingPointStyle.iconKey, (iconKey) => {
       pendingPointStyle.iconKey = iconKey;
       refreshPendingPointStyleUi();
@@ -989,6 +1057,7 @@
   }
 
   function refreshEditingPointStyleUi() {
+    if (portEditType) portEditType.value = normalizePointType(editingPointStyle.pointType);
     renderIconPicker(portEditIconPicker, editingPointStyle.iconKey, (iconKey) => {
       editingPointStyle.iconKey = iconKey;
       refreshEditingPointStyleUi();
@@ -1072,6 +1141,7 @@
       || (!isConnectionsMode() && !seaReady);
     drawBtn.disabled = routeUnavailable;
     findPortBtn.disabled = isPlottingRoute || routeChoiceOpen;
+    placeSearchBtn.disabled = isPlottingRoute || routeChoiceOpen;
     measureBtn.disabled = isPlottingRoute || routeChoiceOpen;
   }
 
@@ -1101,7 +1171,8 @@
     modalLng.textContent = latlng.lng.toFixed(3);
     portNameInput.value = '';
     pendingPointStyle = {
-      iconKey: 'anchor',
+      pointType: getDefaultPointType(),
+      iconKey: getSuggestedIconKeyForType(getDefaultPointType()),
       markerColor: settings.markerColor
     };
     refreshPendingPointStyleUi();
@@ -1136,6 +1207,7 @@
     const entry = {
       id, marker, name,
       latlng: L.latLng(latlng.lat, latlng.lng),
+      pointType: pointStyle.pointType,
       iconKey: pointStyle.iconKey,
       markerColor: pointStyle.markerColor,
       details: opts.details || '',
@@ -1175,6 +1247,7 @@
   const portModalTitle = document.getElementById('portModalTitle');
   const portModalSub = document.getElementById('portModalSub');
   const portEditName = document.getElementById('portEditName');
+  const portEditType = document.getElementById('portEditType');
   const portEditIconPicker = document.getElementById('portEditIconPicker');
   const portEditColorPicker = document.getElementById('portEditColorPicker');
   const portEditDetails = document.getElementById('portEditDetails');
@@ -1187,6 +1260,7 @@
   function openPortModal(entry) {
     editingPort = entry;
     editingPointStyle = {
+      pointType: entry.pointType,
       iconKey: entry.iconKey,
       markerColor: entry.markerColor
     };
@@ -1206,11 +1280,27 @@
     editingPointStyle = null;
   }
 
+  if (pointTypeInput) {
+    pointTypeInput.addEventListener('change', () => {
+      maybeApplySuggestedIcon(pendingPointStyle, pointTypeInput.value);
+      refreshPendingPointStyleUi();
+    });
+  }
+
+  if (portEditType) {
+    portEditType.addEventListener('change', () => {
+      if (!editingPointStyle) return;
+      maybeApplySuggestedIcon(editingPointStyle, portEditType.value);
+      refreshEditingPointStyleUi();
+    });
+  }
+
   function savePortEdits() {
     if (!editingPort) return;
     const newName = (portEditName.value || '').trim() || editingPort.name;
     const newDetails = portEditDetails.value || '';
     const wantBubble = bubbleToggle.checked;
+    editingPort.pointType = normalizePointType(editingPointStyle.pointType);
     editingPort.iconKey = normalizePointIcon(editingPointStyle.iconKey);
     editingPort.markerColor = normalizePointColor(editingPointStyle.markerColor);
 
@@ -1678,6 +1768,7 @@
     if (portModal.classList.contains('show')) closePortModal();
     else if (routeChoiceModal.classList.contains('show')) closeRouteChoice();
     else if (searchModal.classList.contains('show')) closeSearchModal();
+    else if (placeModal.classList.contains('show')) closePlaceModal();
     else if (exportModal.classList.contains('show')) closeExportModal();
     else if (settingsModal.classList.contains('show')) closeSettingsModal();
     else if (confirmModal.classList.contains('show')) confirmModal.classList.remove('show');
@@ -1780,8 +1871,12 @@
       const btn = document.createElement('button');
       btn.className = 'search-result';
       const notes = (entry.details || '').trim();
+      const pointTypeMeta = getPointTypeMeta(entry.pointType);
       btn.innerHTML = `
-        <div class="search-result-name">${escapeHtml(entry.name)}</div>
+        <div class="search-result-top">
+          <div class="search-result-name">${escapeHtml(entry.name)}</div>
+          <span class="search-result-pill">${escapeHtml(pointTypeMeta.label)}</span>
+        </div>
         <div class="search-result-meta">${entry.latlng.lat.toFixed(3)}° • ${entry.latlng.lng.toFixed(3)}°</div>
         ${notes ? `<div class="search-result-notes">${escapeHtml(notes.slice(0, 96))}${notes.length > 96 ? '…' : ''}</div>` : ''}
       `;
@@ -1798,6 +1893,7 @@
   function openSearchModal() {
     setDrawMode(false);
     setMeasureMode(false);
+    closePlaceModal({ preserveInput: true, silent: true });
     portSearchInput.value = '';
     renderSearchResults('');
     searchModal.classList.add('show');
@@ -1821,6 +1917,133 @@
   });
   searchModal.addEventListener('click', (e) => {
     if (e.target === searchModal) closeSearchModal();
+  });
+
+  /* ===== Place search ===== */
+  function renderPlaceSearchResults(results, query, selectedType) {
+    placeSearchResults.innerHTML = '';
+    if (!query) {
+      placeSearchResults.innerHTML = '<div class="search-empty">Search once to add a real-world place to the current map.</div>';
+      return;
+    }
+    if (!results.length) {
+      placeSearchResults.innerHTML = `<div class="search-empty">No ${selectedType !== 'auto' ? escapeHtml(getPointTypeMeta(selectedType).label.toLowerCase()) + ' ' : ''}matches found for this search.</div>`;
+      return;
+    }
+
+    results.forEach((result) => {
+      const inferredType = selectedType === 'auto' ? inferPointTypeFromPlaceResult(result) : normalizePointType(selectedType);
+      const typeMeta = getPointTypeMeta(inferredType);
+      const button = document.createElement('button');
+      button.className = 'search-result';
+      const lat = Number(result.lat);
+      const lng = Number(result.lon);
+      const primaryLabel = result.name || result.display_name.split(',')[0] || 'Unnamed place';
+      button.innerHTML = `
+        <div class="search-result-top">
+          <div class="search-result-name">${escapeHtml(primaryLabel)}</div>
+          <span class="search-result-pill">${escapeHtml(typeMeta.label)}</span>
+        </div>
+        <div class="search-result-meta">${lat.toFixed(3)}° • ${lng.toFixed(3)}°</div>
+        <div class="search-result-notes">${escapeHtml(result.display_name)}</div>
+      `;
+      button.addEventListener('click', () => {
+        const entry = addMarker(L.latLng(lat, lng), primaryLabel, {
+          pointType: inferredType,
+          iconKey: getSuggestedIconKeyForType(inferredType),
+          markerColor: settings.markerColor
+        });
+        closePlaceModal({ preserveInput: false, silent: true });
+        map.flyTo(entry.latlng, Math.max(map.getZoom(), 5), { animate: true, duration: 0.8 });
+        flashPort(entry);
+        showHint(`Added ${typeMeta.label.toLowerCase()}: ${entry.name}.`);
+      });
+      placeSearchResults.appendChild(button);
+    });
+  }
+
+  async function fetchPlaceResults(query) {
+    const cacheKey = query.trim().toLowerCase();
+    if (placeSearchCache.has(cacheKey)) return placeSearchCache.get(cacheKey);
+    const url = new URL(PLACE_SEARCH_ENDPOINT);
+    url.searchParams.set('q', query);
+    url.searchParams.set('format', 'jsonv2');
+    url.searchParams.set('limit', '8');
+    url.searchParams.set('addressdetails', '1');
+    const response = await fetch(url.toString(), {
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+    if (!response.ok) {
+      throw new Error(`Place search failed with ${response.status}`);
+    }
+    const data = await response.json();
+    placeSearchCache.set(cacheKey, data);
+    return data;
+  }
+
+  async function runPlaceSearch() {
+    const query = (placeSearchInput.value || '').trim();
+    const selectedType = placeTypeFilterSelect.value || 'auto';
+    if (!query) {
+      renderPlaceSearchResults([], '', selectedType);
+      showHint('Enter a place name before searching.');
+      return;
+    }
+    placeSearchSubmitBtn.disabled = true;
+    placeSearchSubmitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Searching';
+    try {
+      const rawResults = await fetchPlaceResults(query);
+      const filtered = selectedType === 'auto'
+        ? rawResults
+        : rawResults.filter((result) => inferPointTypeFromPlaceResult(result) === selectedType);
+      renderPlaceSearchResults(filtered, query, selectedType);
+    } catch (error) {
+      console.error('Place search failed', error);
+      placeSearchResults.innerHTML = '<div class="search-empty">Place search failed. Try again in a moment.</div>';
+      showHint('Place search failed.');
+    } finally {
+      placeSearchSubmitBtn.disabled = false;
+      placeSearchSubmitBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Search';
+    }
+  }
+
+  function openPlaceModal() {
+    setDrawMode(false);
+    setMeasureMode(false);
+    closeSearchModal();
+    placeModal.classList.add('show');
+    if (!placeSearchResults.children.length) {
+      renderPlaceSearchResults([], '', placeTypeFilterSelect.value || 'auto');
+    }
+    setTimeout(() => placeSearchInput.focus(), 60);
+  }
+
+  function closePlaceModal(options) {
+    const { preserveInput = true, silent = false } = options || {};
+    placeModal.classList.remove('show');
+    if (!preserveInput) {
+      placeSearchInput.value = '';
+      placeTypeFilterSelect.value = 'auto';
+      placeSearchResults.innerHTML = '';
+    }
+    if (!silent) hideHint();
+  }
+
+  placeSearchBtn.addEventListener('click', openPlaceModal);
+  placeCloseBtn.addEventListener('click', () => closePlaceModal());
+  placeSearchSubmitBtn.addEventListener('click', runPlaceSearch);
+  placeSearchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      runPlaceSearch();
+    } else if (e.key === 'Escape') {
+      closePlaceModal();
+    }
+  });
+  placeModal.addEventListener('click', (e) => {
+    if (e.target === placeModal) closePlaceModal();
   });
 
   /* ===== Sea grid (land/sea mask) =====
@@ -2235,7 +2458,7 @@
   }
 
   /* ===== Route layers ===== */
-  function drawRouteLayer(latlngs, style = 'primary', preview = false, routeMode = 'maritime') {
+  function drawRouteLayer(latlngs, style = 'primary', preview = false, routeMode = 'maritime', fromEntry = null, toEntry = null) {
     const color = style === 'primary'
       ? getComputedStyle(document.documentElement).getPropertyValue('--route-color').trim()
       : getComputedStyle(document.documentElement).getPropertyValue('--route-alt-color').trim();
@@ -2255,7 +2478,8 @@
         dashArray: preview ? '10, 10' : '12, 10',
         lineCap: 'round'
       });
-      return L.layerGroup([halo, line]);
+      const arrow = getConnectionArrowLayer(renderLatLngs, color, preview, fromEntry, toEntry);
+      return L.layerGroup(arrow ? [halo, line, arrow] : [halo, line]);
     }
 
     const halo = L.polyline(renderLatLngs, {
@@ -2268,13 +2492,16 @@
     return L.layerGroup([halo, line]);
   }
 
-  function bindRoutePopup(group, portAName, portBName, km, variant, routeMode = 'maritime') {
+  function bindRoutePopup(group, portAName, portBName, km, variant, routeMode = 'maritime', fromEntry = null, toEntry = null) {
     const nm = Math.round(km / 1.852);
+    const descriptor = routeMode === 'connection'
+      ? getConnectionDescriptor(fromEntry, toEntry)
+      : (variant === 'primary' ? 'Primary' : 'Alternative');
     group.eachLayer(l => {
       l.bindPopup(`
         <div class="port-popup">
           <strong>${escapeHtml(portAName)} → ${escapeHtml(portBName)}</strong>
-          <div class="coord">${Math.round(km).toLocaleString()} km • ${nm.toLocaleString()} nautical mi • ${routeMode === 'connection' ? 'Connection' : (variant === 'primary' ? 'Primary' : 'Alternative')}</div>
+          <div class="coord">${Math.round(km).toLocaleString()} km • ${nm.toLocaleString()} nautical mi • ${descriptor}</div>
         </div>
       `);
     });
@@ -2284,10 +2511,10 @@
     const fallbackPointName = getModeCopy().pointSingular;
     routes.forEach((route) => {
       if (route.layer) map.removeLayer(route.layer);
-      const nextGroup = drawRouteLayer(route.latlngs, route.variant, false, route.routeMode || 'maritime').addTo(map);
       const from = findPort(route.fromId);
       const to = findPort(route.toId);
-      bindRoutePopup(nextGroup, from ? from.name : route.fromName || fallbackPointName, to ? to.name : route.toName || fallbackPointName, route.km, route.variant, route.routeMode || 'maritime');
+      const nextGroup = drawRouteLayer(route.latlngs, route.variant, false, route.routeMode || 'maritime', from, to).addTo(map);
+      bindRoutePopup(nextGroup, from ? from.name : route.fromName || fallbackPointName, to ? to.name : route.toName || fallbackPointName, route.km, route.variant, route.routeMode || 'maritime', from, to);
       route.layer = nextGroup;
       route.fromName = from ? from.name : route.fromName;
       route.toName = to ? to.name : route.toName;
@@ -2297,8 +2524,8 @@
   function offerRouteChoice(portA, portB, primLL, primKm, altLL, altKm) {
     closeRouteChoice({ silent: true });
     // Show both as previews on map
-    const primPreview = drawRouteLayer(primLL, 'primary', true, 'maritime').addTo(map);
-    const altPreview  = drawRouteLayer(altLL,  'alt',     true, 'maritime').addTo(map);
+    const primPreview = drawRouteLayer(primLL, 'primary', true, 'maritime', portA, portB).addTo(map);
+    const altPreview  = drawRouteLayer(altLL,  'alt',     true, 'maritime', portA, portB).addTo(map);
     map.fitBounds(primPreview.getLayers()[0].getBounds().extend(altPreview.getLayers()[0].getBounds()), { padding: [60, 60] });
 
     routeChoiceSub.textContent = `Two viable sea routes from ${portA.name} to ${portB.name}.`;
@@ -2407,15 +2634,64 @@
     return latlngs;
   }
 
+  function getConnectionDescriptor(fromEntry, toEntry) {
+    if (fromEntry && toEntry && fromEntry.pointType === 'airport' && toEntry.pointType === 'airport') {
+      return 'Air route';
+    }
+    return 'Connection';
+  }
+
+  function getConnectionArrowLayer(renderLatLngs, color, preview, fromEntry, toEntry) {
+    if (!Array.isArray(renderLatLngs) || renderLatLngs.length < 2) return null;
+    const segments = [];
+    let totalLength = 0;
+    for (let index = 1; index < renderLatLngs.length; index += 1) {
+      const startLatLng = L.latLng(renderLatLngs[index - 1]);
+      const endLatLng = L.latLng(renderLatLngs[index]);
+      const a = map.latLngToLayerPoint(startLatLng);
+      const b = map.latLngToLayerPoint(endLatLng);
+      const length = Math.hypot(b.x - a.x, b.y - a.y);
+      if (length <= 0.01) continue;
+      segments.push({ a, b, length, startLatLng, endLatLng });
+      totalLength += length;
+    }
+    if (!segments.length || totalLength < 18) return null;
+    const targetDistance = totalLength * 0.58;
+    let traversed = 0;
+    let chosen = segments[segments.length - 1];
+    for (const segment of segments) {
+      if (traversed + segment.length >= targetDistance) {
+        chosen = segment;
+        break;
+      }
+      traversed += segment.length;
+    }
+    const localDistance = Math.max(0, Math.min(chosen.length, targetDistance - traversed));
+    const ratio = chosen.length <= 0 ? 0 : localDistance / chosen.length;
+    const lat = chosen.startLatLng.lat + (chosen.endLatLng.lat - chosen.startLatLng.lat) * ratio;
+    const lng = chosen.startLatLng.lng + (chosen.endLatLng.lng - chosen.startLatLng.lng) * ratio;
+    const angle = Math.atan2(chosen.b.y - chosen.a.y, chosen.b.x - chosen.a.x) * 180 / Math.PI;
+    const isAir = fromEntry && toEntry && fromEntry.pointType === 'airport' && toEntry.pointType === 'airport';
+    return L.marker([lat, lng], {
+      interactive: false,
+      icon: L.divIcon({
+        className: 'connection-arrow-host',
+        html: `<div class="connection-arrow${isAir ? ' is-air' : ''}${preview ? ' is-preview' : ''}" style="--arrow-color:${color}; transform: rotate(${angle}deg);"><i class="fa-solid ${isAir ? 'fa-plane' : 'fa-arrow-right-long'}"></i></div>`,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17]
+      })
+    });
+  }
+
   function commitRoute(portA, portB, latlngs, km, variant, routeMode = 'maritime') {
-    const group = drawRouteLayer(latlngs, variant, false, routeMode).addTo(map);
+    const group = drawRouteLayer(latlngs, variant, false, routeMode, portA, portB).addTo(map);
     const nm = Math.round(km / 1.852);
-    bindRoutePopup(group, portA.name, portB.name, km, variant, routeMode);
+    bindRoutePopup(group, portA.name, portB.name, km, variant, routeMode, portA, portB);
     routes.push({ layer: group, fromId: portA.id, toId: portB.id, fromName: portA.name, toName: portB.name, variant, km, latlngs, routeMode });
     updateStats();
     refreshWorkflowState();
     showHint(routeMode === 'connection'
-      ? `Connection added: ${portA.name} → ${portB.name} (${Math.round(km).toLocaleString()} km)`
+      ? `${getConnectionDescriptor(portA, portB)} added: ${portA.name} → ${portB.name} (${Math.round(km).toLocaleString()} km)`
       : `Route charted: ${portA.name} → ${portB.name} (${nm.toLocaleString()} nmi)`);
     scheduleDraftSave();
     scheduleHistorySnapshot();
@@ -2875,6 +3151,7 @@
         name: m.name,
         lat: m.latlng.lat,
         lng: m.latlng.lng,
+        pointType: m.pointType,
         iconKey: m.iconKey,
         markerColor: m.markerColor,
         details: m.details || '',
@@ -2932,6 +3209,7 @@
           const latlng = L.latLng(p.lat, p.lng);
           const entry = addMarker(latlng, p.name || getModeCopy().pointSingular, {
             id: p.id,
+            pointType: p.pointType,
             iconKey: p.iconKey,
             markerColor: p.markerColor,
             details: p.details || '',
@@ -2998,9 +3276,10 @@
             coordinates: [port.lng, port.lat]
           },
           properties: {
-            featureType: atlasState.settings.atlasMode === 'maritime' ? 'port' : 'location',
+            featureType: port.pointType || (atlasState.settings.atlasMode === 'maritime' ? 'port' : 'location'),
             id: port.id,
             name: port.name,
+            pointType: port.pointType,
             iconKey: port.iconKey,
             markerColor: port.markerColor,
             details: port.details,
@@ -3013,7 +3292,10 @@
           type: 'Feature',
           geometry: {
             type: 'LineString',
-            coordinates: getRenderableRouteLatLngs(route.latlngs, route.routeMode || 'maritime').map(([lat, lng]) => [lng, lat])
+            coordinates: getRenderableRouteLatLngs(route.latlngs, route.routeMode || 'maritime').map((latlng) => {
+              const point = L.latLng(latlng);
+              return [point.lng, point.lat];
+            })
           },
           properties: {
             featureType: route.routeMode === 'connection' ? 'connection' : 'route',
@@ -3180,6 +3462,8 @@
   });
 
   /* ===== Init ===== */
+  populatePointTypeSelect(pointTypeInput);
+  populatePointTypeSelect(portEditType);
   populateFontSelect(displayFontSelect, ['cormorant', 'fraunces', 'playfair', 'space']);
   populateFontSelect(bodyFontSelect, ['cormorant', 'fraunces', 'playfair', 'manrope', 'space']);
   populateFontSelect(uiFontSelect, ['jetbrains', 'ibmplexmono', 'space', 'manrope']);

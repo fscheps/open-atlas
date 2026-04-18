@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta name="x-poe-datastore-behavior" content="local_only"><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://basemaps.cartocdn.com https://cdnjs.cloudflare.com https://unpkg.com https://i.imgur.com https://images.unsplash.com https://picsum.photos; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+<!DOCTYPE html><html lang="en"><head><meta name="x-poe-datastore-behavior" content="local_only"><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; connect-src 'self' https://unpkg.com https://nominatim.openstreetmap.org; img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://basemaps.cartocdn.com https://cdnjs.cloudflare.com https://unpkg.com https://i.imgur.com https://images.unsplash.com https://picsum.photos; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Open Atlas — Map Studio</title>
@@ -102,6 +102,10 @@
       <i class="fa-solid fa-magnifying-glass-location"></i>
       <span id="findSavedLabel">Find saved location</span>
     </button>
+    <button class="btn" id="placeSearchBtn">
+      <i class="fa-solid fa-globe"></i>
+      <span id="placeSearchLabel">Search places</span>
+    </button>
     <button class="btn" id="measureBtn">
       <i class="fa-solid fa-ruler"></i>
       <span id="measureLabel">Measure distance</span>
@@ -199,6 +203,8 @@
     <h3 id="nameModalTitle">Name this Port</h3>
     <div class="modal-sub">Lat <span id="modalLat">—</span> • Lng <span id="modalLng">—</span></div>
     <input id="portNameInput" type="text" placeholder="e.g. Port of Lisbon" autocomplete="off">
+    <span class="field-label">Point Type</span>
+    <select id="pointTypeInput"></select>
     <span class="field-label">Point Icon</span>
     <div class="icon-picker-grid" id="nameIconPicker"></div>
 
@@ -223,6 +229,9 @@
 
     <span class="field-label" id="portNameFieldLabel">Port Name</span>
     <input id="portEditName" type="text" autocomplete="off">
+
+    <span class="field-label">Point Type</span>
+    <select id="portEditType"></select>
 
     <span class="field-label">Point Icon</span>
     <div class="icon-picker-grid" id="portEditIconPicker"></div>
@@ -249,6 +258,40 @@
         <i class="fa-solid fa-floppy-disk"></i> Save
       </button>
     </div>
+  </div>
+</div>
+
+<!-- Place search modal -->
+<div class="modal-backdrop" id="placeModal">
+  <div class="modal" style="min-width: 360px; max-width: 560px;">
+    <h3 id="placeModalTitle">Search Places</h3>
+    <div class="modal-sub" id="placeModalSub">Search the world for a city, airport, port, or landmark and add it directly to this map.</div>
+    <div class="settings-grid">
+      <div class="settings-field">
+        <label for="placeSearchInput">Query</label>
+        <input id="placeSearchInput" type="text" placeholder="e.g. Buenos Aires or JFK Airport" autocomplete="off">
+      </div>
+      <div class="settings-field">
+        <label for="placeTypeFilterSelect">Point Type</label>
+        <select id="placeTypeFilterSelect">
+          <option value="auto">Auto-detect</option>
+          <option value="port">Port</option>
+          <option value="city">City</option>
+          <option value="airport">Airport</option>
+          <option value="location">Location</option>
+        </select>
+      </div>
+    </div>
+    <div class="settings-tip">OpenStreetMap Nominatim search is used on demand only after you press Search. Results are cached in-browser for repeat lookups.</div>
+    <div class="modal-actions">
+      <button class="btn btn-quiet" id="placeCloseBtn">
+        <i class="fa-solid fa-xmark"></i> Close
+      </button>
+      <button class="btn" id="placeSearchSubmitBtn">
+        <i class="fa-solid fa-magnifying-glass"></i> Search
+      </button>
+    </div>
+    <div class="search-results" id="placeSearchResults"></div>
   </div>
 </div>
 
@@ -466,11 +509,12 @@
 
     <div style="margin-top: 20px; max-height: 60vh; overflow-y: auto; padding-right: 8px;">
       <div class="help-section">
-        <div class="help-title"><i class="fa-solid fa-anchor"></i> Adding Points</div>
-        <div class="help-text">
+      <div class="help-title"><i class="fa-solid fa-anchor"></i> Adding Points</div>
+      <div class="help-text">
           • Click anywhere on the map to anchor a new port or location<br>
           • Enter a name in the dialog (or leave blank for auto-numbering)<br>
-          • Choose a point icon and color while creating the point, or refine them later in details<br>
+          • Choose a point type, icon, and color while creating the point, or refine them later in details<br>
+          • Use <strong>Search places</strong> in the Explore section to add a city, airport, port, or landmark from search results<br>
           • Saved points display with permanent labels showing their names<br>
           • Click any point to edit its details, add notes, or delete it
         </div>
@@ -503,9 +547,10 @@
       </div>
 
       <div class="help-section">
-        <div class="help-title"><i class="fa-solid fa-compass-drafting"></i> Navigator Tools</div>
-        <div class="help-text">
+      <div class="help-title"><i class="fa-solid fa-compass-drafting"></i> Navigator Tools</div>
+      <div class="help-text">
           • Use <strong>Find a saved location</strong> in the Explore section to search by name or notes in this atlas<br>
+          • Use <strong>Search places</strong> when the location is not yet in the map and you want to add it from a real-world search result<br>
           • Selecting a match jumps the map to that point and briefly highlights it<br>
           • Click <strong>Measure distance</strong> to start the straight-line ruler<br>
           • Click any two points on the map to measure great-circle distance in km and nautical miles<br>

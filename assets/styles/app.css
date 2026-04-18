@@ -1246,6 +1246,13 @@
     transform: translateY(-1px);
   }
 
+  .search-result-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
   .search-result-name {
     font-family: var(--font-ui);
     font-size: 11px;
@@ -1253,6 +1260,19 @@
     letter-spacing: 1.3px;
     text-transform: uppercase;
     color: var(--accent);
+  }
+
+  .search-result-pill {
+    flex: 0 0 auto;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-family: var(--font-ui);
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    background: rgba(255,255,255,0.72);
   }
 
   .search-result-meta {
@@ -1279,6 +1299,34 @@
     0% { box-shadow: 0 0 0 0 rgba(184, 137, 31, 0.65), 0 3px 8px rgba(0,0,0,0.4); }
     55% { box-shadow: 0 0 0 18px transparent, 0 3px 8px rgba(0,0,0,0.4); }
     100% { box-shadow: 0 0 0 0 transparent, 0 3px 8px rgba(0,0,0,0.4); }
+  }
+
+  .connection-arrow-host {
+    background: transparent;
+    border: 0;
+  }
+
+  .connection-arrow {
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    color: var(--arrow-color);
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.18));
+    opacity: 0.92;
+    pointer-events: none;
+  }
+
+  .connection-arrow i {
+    font-size: 16px;
+  }
+
+  .connection-arrow.is-air i {
+    font-size: 14px;
+  }
+
+  .connection-arrow.is-preview {
+    opacity: 0.58;
   }
 
   /* Leaflet overrides */

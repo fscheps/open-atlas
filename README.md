@@ -7,10 +7,13 @@ Open Atlas is a static, open-source map storytelling app built for easy sharing 
 ## What it does
 
 - Place ports or locations directly on the map
+- Search real-world places on demand and add them directly to the map
 - Switch between `Maritime`, `Pins`, and `Connections` map modes
 - Draw sea routes that avoid land using client-side pathfinding
 - Draw straight or curved arc connections for network and flight-style maps
+- Add airport-ready directional air routes when connecting two airport points
 - Choose point icons and per-point colors for clearer map storytelling
+- Classify points as `Port`, `City`, `Airport`, or generic `Location`
 - Drag and resize map callouts freely while keeping them anchored to their points
 - Switch between `Subtle`, `Editorial`, and `Bold` callout treatments
 - Let callout text compact itself as the callout is resized smaller
@@ -30,13 +33,14 @@ Open Atlas is a static, open-source map storytelling app built for easy sharing 
 Open Atlas is designed for a simple workflow:
 
 1. Create ports, locations, or connections depending on the chosen mode.
-2. Tweak the visual identity in `Studio Settings`.
-3. Let the in-browser draft system keep your latest working state close at hand.
-4. Export JSON as the editable master file.
-5. Re-import that JSON later to continue working.
-6. Use `Undo` / `Redo` when refining the atlas.
-7. Copy the current map view when you want a quick paste-ready image.
-8. Export PNG for sharing or GeoJSON for interoperability.
+2. Use `Search places` when you want to add a real-world city, airport, port, or landmark without clicking manually.
+3. Tweak the visual identity in `Studio Settings`.
+4. Let the in-browser draft system keep your latest working state close at hand.
+5. Export JSON as the editable master file.
+6. Re-import that JSON later to continue working.
+7. Use `Undo` / `Redo` when refining the atlas.
+8. Copy the current map view when you want a quick paste-ready image.
+9. Export PNG for sharing or GeoJSON for interoperability.
 
 ## Project layout
 
@@ -97,6 +101,8 @@ JSON exports are the editable source of truth for the app. They include:
 Draft autosaves reuse the same atlas shape and live only in the browser via `localStorage`.
 
 The app now writes the canonical `open-atlas` JSON format and still accepts the older prototype-era `mariners-atlas` format on import.
+
+Point records now also store point type metadata such as `port`, `city`, `airport`, or `location`.
 
 GeoJSON exports are for interoperability. They include:
 

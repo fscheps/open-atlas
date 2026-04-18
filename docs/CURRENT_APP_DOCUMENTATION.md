@@ -10,6 +10,7 @@ Open Atlas is a static browser application for building visual map atlases with:
 - selectable map modes: `Maritime`, `Pins`, and `Connections`
 - maritime routes generated client-side
 - straight or curved-arc connections for network and flight-style maps
+- airport-aware directional air-route presentation inside `Connections` mode
 - notes and draggable, resizable annotation bubbles
 - draft autosave
 - undo and redo
@@ -45,7 +46,9 @@ The project is intentionally:
 ### Mapping
 
 - Add locations by clicking the map
+- Add locations by on-demand place search using OpenStreetMap Nominatim
 - Edit names and notes
+- Classify points as `port`, `city`, `airport`, or `location`
 - Choose per-point icons and colors
 - Toggle draggable and resizable info bubbles
 - Move callouts freely around the visible map while their tails stay anchored to the selected point
@@ -67,6 +70,7 @@ The project is intentionally:
 - Sea route plotting via A* pathfinding on a rasterized land/sea grid
 - Alternative route choice when a second viable path is meaningfully different
 - Configurable straight or arc connection drawing between two saved points in `Connections` mode
+- Directional arrow markers on connection links, with plane icons when both endpoints are airports
 - Distance display in kilometers and nautical miles
 
 ### Persistence
@@ -122,7 +126,7 @@ The editable atlas export shape currently includes:
 ```json
 {
   "format": "open-atlas",
-  "version": 6,
+  "version": 7,
   "exported": "ISO timestamp",
   "view": {
     "center": [25, -30],
@@ -152,6 +156,7 @@ The editable atlas export shape currently includes:
       "name": "Port of Lisbon",
       "lat": 38.722,
       "lng": -9.139,
+      "pointType": "port",
       "iconKey": "anchor",
       "markerColor": "#0b7a75",
       "details": "",
@@ -170,12 +175,13 @@ The editable atlas export shape currently includes:
 
 Notes:
 
-- `version` is currently `6`
+- `version` is currently `7`
 - JSON is the source-of-truth editable format
 - GeoJSON is an export convenience format, not the primary editable schema
 - draft autosaves reuse the same atlas shape plus a `draftSavedAt` timestamp
 - the app still accepts legacy `mariners-atlas` JSON on import and during browser draft migration
 - routes may now include a `routeMode` field such as `maritime` or `connection`
+- point records may now include a `pointType` field such as `port`, `city`, `airport`, or `location`
 - bubbles now store width, height, and offset-from-point values
 
 ## Main code areas in `assets/scripts/app.js`
@@ -183,9 +189,9 @@ Notes:
 - theme and settings
 - draft persistence
 - history snapshots
-- marker and bubble management
+- marker, point-type, and bubble management
 - overlay-based callout geometry and interaction
-- port search
+- saved-item search and on-demand place search
 - sea-grid generation
 - A* routing and alternative route detection
 - measurement tools
@@ -204,6 +210,7 @@ Important current external dependencies:
 - topojson-client
 - world-atlas land data
 - CARTO basemap tiles
+- OpenStreetMap Nominatim search endpoint
 - Google Fonts
 - Font Awesome Free
 
@@ -211,6 +218,7 @@ Notes:
 
 - `Presentation Flat` uses the built-in world land geometry instead of a tile layer
 - tile-based styles still depend on external CARTO basemap requests
+- place search intentionally uses a submit-based query flow rather than autocomplete because the public Nominatim usage policy forbids client-side autocomplete on the shared endpoint
 
 ## Known architectural constraints
 
@@ -236,7 +244,7 @@ Before calling a change done, verify:
 
 The best product expansion paths are:
 
-1. place search for creating locations by city name
-2. vendored dependencies and attribution docs for a cleaner OSS story
-3. self-hosted fonts and tighter CSP
-4. directional arrowheads for connections and air-route mode
+1. vendored dependencies and attribution docs for a cleaner OSS story
+2. self-hosted fonts and tighter CSP
+3. richer air-route presets and airport-focused styling
+4. optional logo, legend, and print/export presentation blocks

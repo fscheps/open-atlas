@@ -18,15 +18,16 @@ This file is meant for a future human contributor or another coding model.
 - html2canvas
 - Interact.js
 - topojson-client
+- OpenStreetMap Nominatim (submit-based place search only)
 
 ## Current priorities
 
 The highest-value next work is:
 
 1. open-source transparency and dependency vendoring
-2. place search and richer point metadata for the newly shipped `Pins` and `Connections` modes
-3. preserving a polished export workflow while adding more presentation options
-4. future air-route flows, directional arrows, and discovery improvements
+2. preserving a polished export workflow while adding more presentation options
+3. richer air-route presets, legends, and brand-ready presentation tooling
+4. self-hosted fonts, tighter CSP, and attribution cleanup
 
 ## Important constraints
 
