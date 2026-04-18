@@ -24,7 +24,7 @@ Open Atlas is a static, open-source map storytelling app built for easy sharing 
 - Export maps as PNG with framing and quality controls
 - Copy the current map view straight to the clipboard without downloading a file
 - Export map data as GeoJSON for GIS and downstream tooling
-- Customize title, subtitle, fonts, colors, theme mode, basemap style, and flat presentation sea/land colors
+- Customize title, subtitle, fonts, colors, basemap style, and flat presentation sea/land colors
 - Choose connection style and callout style in the appearance controls
 - Keep everything fully static and GitHub Pages friendly
 

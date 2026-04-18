@@ -1,8 +1,5 @@
   /* ===== Theme + typography ===== */
-  const systemThemeMedia = window.matchMedia('(prefers-color-scheme: dark)');
-  if (systemThemeMedia.matches) {
-    document.documentElement.classList.add('dark');
-  }
+  document.documentElement.classList.remove('dark');
 
   /* ===== Map ===== */
   const map = L.map('map', { zoomControl: true, worldCopyJump: true }).setView([25, -30], 3);
@@ -19,10 +16,6 @@
       url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
     },
-    dark_matter: {
-      url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-    }
   };
   let baseLayer = null;
   let landFeature = null;
@@ -114,6 +107,12 @@
     }).addTo(map);
   }
 
+  function normalizeMapStyle(styleKey) {
+    if (styleKey === 'dark_matter') return DEFAULT_SETTINGS.mapStyle;
+    if (styleKey === 'presentation') return 'presentation';
+    return TILE_STYLES[styleKey] ? styleKey : DEFAULT_SETTINGS.mapStyle;
+  }
+
   /* ===== State ===== */
   const markers = [];   // {id, marker, name, latlng}
   const routes = [];    // layer groups
@@ -199,7 +198,6 @@
   const settingsTitleInput = document.getElementById('settingsTitleInput');
   const settingsSubtitleInput = document.getElementById('settingsSubtitleInput');
   const atlasModeSelect = document.getElementById('atlasModeSelect');
-  const themeModeSelect = document.getElementById('themeModeSelect');
   const mapStyleSelect = document.getElementById('mapStyleSelect');
   const displayFontSelect = document.getElementById('displayFontSelect');
   const bodyFontSelect = document.getElementById('bodyFontSelect');
@@ -310,7 +308,7 @@
       uiFont: 'jetbrains',
       calloutStyle: 'bold',
       connectionStyle: 'straight',
-      themeMode: 'auto',
+      themeMode: 'light',
       mapStyle: 'voyager_labels_under',
       seaColor: '#d6e1ea',
       landColor: '#f2eadc'
@@ -330,22 +328,6 @@
       mapStyle: 'presentation',
       seaColor: '#d7e7f1',
       landColor: '#f7f4ea'
-    },
-    midnight: {
-      label: 'Midnight',
-      accentColor: '#d4a95a',
-      markerColor: '#d4a95a',
-      routeColor: '#69d2e7',
-      routeAltColor: '#ff9b71',
-      displayFont: 'playfair',
-      bodyFont: 'cormorant',
-      uiFont: 'jetbrains',
-      calloutStyle: 'bold',
-      connectionStyle: 'arc',
-      themeMode: 'dark',
-      mapStyle: 'presentation',
-      seaColor: '#0f2636',
-      landColor: '#21394d'
     },
     expedition: {
       label: 'Expedition',
@@ -983,18 +965,15 @@
   }
 
   function refreshThemeMode() {
-    const wantsDark = settings.themeMode === 'auto'
-      ? systemThemeMedia.matches
-      : settings.themeMode === 'dark';
-    document.documentElement.classList.toggle('dark', wantsDark);
+    document.documentElement.classList.remove('dark');
+    settings.themeMode = 'light';
   }
 
   function refreshSettingsForm() {
     settingsTitleInput.value = settings.atlasTitle;
     settingsSubtitleInput.value = settings.atlasSubtitle;
     atlasModeSelect.value = getAtlasMode();
-    themeModeSelect.value = settings.themeMode;
-    mapStyleSelect.value = settings.mapStyle;
+    mapStyleSelect.value = normalizeMapStyle(settings.mapStyle);
     displayFontSelect.value = settings.displayFont;
     bodyFontSelect.value = settings.bodyFont;
     uiFontSelect.value = settings.uiFont;
@@ -1104,6 +1083,8 @@
     settings = {
       ...settings,
       ...nextSettings,
+      themeMode: 'light',
+      mapStyle: normalizeMapStyle(nextSettings && nextSettings.mapStyle !== undefined ? nextSettings.mapStyle : settings.mapStyle),
       atlasMode: normalizeAtlasMode(nextSettings && nextSettings.atlasMode !== undefined ? nextSettings.atlasMode : settings.atlasMode),
       calloutStyle: normalizeCalloutStyle(nextSettings && nextSettings.calloutStyle !== undefined ? nextSettings.calloutStyle : settings.calloutStyle),
       connectionStyle: normalizeConnectionStyle(nextSettings && nextSettings.connectionStyle !== undefined ? nextSettings.connectionStyle : settings.connectionStyle)
@@ -1976,7 +1957,6 @@
     [settingsTitleInput, 'input', () => applySettings({ atlasTitle: settingsTitleInput.value || DEFAULT_SETTINGS.atlasTitle })],
     [settingsSubtitleInput, 'input', () => applySettings({ atlasSubtitle: settingsSubtitleInput.value || DEFAULT_SETTINGS.atlasSubtitle })],
     [atlasModeSelect, 'change', () => applySettings({ atlasMode: atlasModeSelect.value })],
-    [themeModeSelect, 'change', () => applySettings({ themeMode: themeModeSelect.value })],
     [mapStyleSelect, 'change', () => applySettings({ mapStyle: mapStyleSelect.value })],
     [displayFontSelect, 'change', () => applySettings({ displayFont: displayFontSelect.value })],
     [bodyFontSelect, 'change', () => applySettings({ bodyFont: bodyFontSelect.value })],
@@ -3640,9 +3620,6 @@
   updateExportTip();
   saveHistoryNow();
   refreshWorkflowState();
-  systemThemeMedia.addEventListener('change', () => {
-    if (settings.themeMode === 'auto') refreshThemeMode();
-  });
   map.on('move zoom resize', refreshAllBubbles);
   map.on('moveend', scheduleDraftSave);
 

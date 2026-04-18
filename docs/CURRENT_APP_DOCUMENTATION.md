@@ -84,7 +84,6 @@ The project is intentionally:
 
 - Title and subtitle
 - Map mode
-- Theme mode
 - Basemap style, including a built-in `Presentation Flat` mode
 - Display, body, and UI fonts
 - Callout style
@@ -126,7 +125,7 @@ The editable atlas export shape currently includes:
 ```json
 {
   "format": "open-atlas",
-  "version": 7,
+  "version": 8,
   "exported": "ISO timestamp",
   "view": {
     "center": [25, -30],
