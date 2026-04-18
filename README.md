@@ -13,7 +13,7 @@ Open Atlas is a static, open-source maritime route-mapping app built for easy sh
 - Undo and redo atlas changes in the browser
 - Export maps as PNG with framing, layout, and quality controls
 - Export map data as GeoJSON for GIS and downstream tooling
-- Customize title, subtitle, fonts, colors, theme mode, and basemap style
+- Customize title, subtitle, fonts, colors, theme mode, basemap style, and flat presentation sea/land colors
 - Keep everything fully static and GitHub Pages friendly
 
 ## Use it

@@ -63,9 +63,10 @@ The project is intentionally:
 
 - Title and subtitle
 - Theme mode
-- Basemap style
+- Basemap style, including a built-in `Presentation Flat` mode
 - Display, body, and UI fonts
 - Accent, marker, and route colors
+- Sea and land colors for presentation styling
 - Curated visual presets
 - Live settings preview card in the appearance modal
 
@@ -116,7 +117,9 @@ The editable atlas export shape currently includes:
     "accentColor": "#18567a",
     "markerColor": "#0b7a75",
     "routeColor": "#18567a",
-    "routeAltColor": "#ca6702"
+    "routeAltColor": "#ca6702",
+    "seaColor": "#d7e7f1",
+    "landColor": "#f7f4ea"
   },
   "ports": [],
   "routes": []
@@ -157,6 +160,11 @@ Important current external dependencies:
 - CARTO basemap tiles
 - Google Fonts
 - Font Awesome Free
+
+Notes:
+
+- `Presentation Flat` uses the built-in world land geometry instead of a tile layer
+- tile-based styles still depend on external CARTO basemap requests
 
 ## Known architectural constraints
 

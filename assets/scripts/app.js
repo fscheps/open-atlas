@@ -25,10 +25,46 @@
     }
   };
   let baseLayer = null;
+  let landFeature = null;
+  let presentationLandLayer = null;
+  let customAttribution = null;
+
+  map.createPane('presentationLand');
+  map.getPane('presentationLand').style.zIndex = 250;
+
+  function refreshPresentationLayerStyle() {
+    if (!presentationLandLayer) return;
+    presentationLandLayer.setStyle({
+      fillColor: settings.landColor,
+      fillOpacity: 1,
+      color: tintHex(settings.landColor, -0.18),
+      opacity: 0.72,
+      weight: 0.8,
+      className: 'presentation-land'
+    });
+  }
 
   function setBaseMap(styleKey) {
+    if (baseLayer) {
+      map.removeLayer(baseLayer);
+      baseLayer = null;
+    }
+    if (presentationLandLayer) {
+      map.removeLayer(presentationLandLayer);
+    }
+    if (customAttribution) {
+      map.attributionControl.removeAttribution(customAttribution);
+      customAttribution = null;
+    }
+
+    if (styleKey === 'presentation') {
+      if (presentationLandLayer) presentationLandLayer.addTo(map);
+      customAttribution = 'Land data via world-atlas / Natural Earth';
+      map.attributionControl.addAttribution(customAttribution);
+      return;
+    }
+
     const style = TILE_STYLES[styleKey] || TILE_STYLES.voyager_labels_under;
-    if (baseLayer) map.removeLayer(baseLayer);
     baseLayer = L.tileLayer(style.url, {
       attribution: style.attribution,
       subdomains: 'abcd',
@@ -109,6 +145,8 @@
   const markerColorInput = document.getElementById('markerColorInput');
   const routeColorInput = document.getElementById('routeColorInput');
   const routeAltColorInput = document.getElementById('routeAltColorInput');
+  const seaColorInput = document.getElementById('seaColorInput');
+  const landColorInput = document.getElementById('landColorInput');
   const settingsCloseBtn = document.getElementById('settingsCloseBtn');
   const settingsResetBtn = document.getElementById('settingsResetBtn');
   const presetGrid = document.getElementById('presetGrid');
@@ -119,6 +157,8 @@
   const previewMarkerSwatch = document.getElementById('previewMarkerSwatch');
   const previewRouteSwatch = document.getElementById('previewRouteSwatch');
   const previewAltRouteSwatch = document.getElementById('previewAltRouteSwatch');
+  const previewSeaSwatch = document.getElementById('previewSeaSwatch');
+  const previewLandSwatch = document.getElementById('previewLandSwatch');
 
   let pendingLatLng = null;
   let isPlottingRoute = false;
@@ -170,7 +210,9 @@
       bodyFont: 'cormorant',
       uiFont: 'jetbrains',
       themeMode: 'auto',
-      mapStyle: 'voyager_labels_under'
+      mapStyle: 'voyager_labels_under',
+      seaColor: '#d6e1ea',
+      landColor: '#f2eadc'
     },
     observatory: {
       label: 'Observatory',
@@ -182,7 +224,9 @@
       bodyFont: 'manrope',
       uiFont: 'ibmplexmono',
       themeMode: 'light',
-      mapStyle: 'positron'
+      mapStyle: 'presentation',
+      seaColor: '#d7e7f1',
+      landColor: '#f7f4ea'
     },
     midnight: {
       label: 'Midnight',
@@ -194,7 +238,9 @@
       bodyFont: 'cormorant',
       uiFont: 'jetbrains',
       themeMode: 'dark',
-      mapStyle: 'dark_matter'
+      mapStyle: 'presentation',
+      seaColor: '#0f2636',
+      landColor: '#21394d'
     },
     expedition: {
       label: 'Expedition',
@@ -206,7 +252,9 @@
       bodyFont: 'manrope',
       uiFont: 'ibmplexmono',
       themeMode: 'light',
-      mapStyle: 'voyager_nolabels'
+      mapStyle: 'voyager_nolabels',
+      seaColor: '#d8e7e0',
+      landColor: '#efe7d7'
     }
   };
   const DEFAULT_SETTINGS = {
@@ -220,7 +268,9 @@
     accentColor: '#18567a',
     markerColor: '#0b7a75',
     routeColor: '#18567a',
-    routeAltColor: '#ca6702'
+    routeAltColor: '#ca6702',
+    seaColor: '#d7e7f1',
+    landColor: '#f7f4ea'
   };
   let settings = { ...DEFAULT_SETTINGS };
   let draftSaveTimer = null;
@@ -585,6 +635,8 @@
     markerColorInput.value = settings.markerColor;
     routeColorInput.value = settings.routeColor;
     routeAltColorInput.value = settings.routeAltColor;
+    seaColorInput.value = settings.seaColor;
+    landColorInput.value = settings.landColor;
     refreshSettingsPreview();
   }
 
@@ -599,6 +651,11 @@
     previewMarkerSwatch.style.background = settings.markerColor;
     previewRouteSwatch.style.background = settings.routeColor;
     previewAltRouteSwatch.style.background = settings.routeAltColor;
+    previewSeaSwatch.style.background = settings.seaColor;
+    previewLandSwatch.style.background = settings.landColor;
+    settingsPreviewNote.textContent = settings.mapStyle === 'presentation'
+      ? 'Presentation Flat uses your custom sea and land palette for quieter, branded exports.'
+      : 'Tile basemaps keep geographic labels while your overlays inherit the palette and type choices.';
   }
 
   function applySettings(nextSettings, opts) {
@@ -615,9 +672,12 @@
     document.documentElement.style.setProperty('--route-color', settings.routeColor);
     document.documentElement.style.setProperty('--route-alt-color', settings.routeAltColor);
     document.documentElement.style.setProperty('--route-glow', rgbaFromHex(settings.routeColor, 0.4));
+    document.documentElement.style.setProperty('--sea-color', settings.seaColor);
+    document.documentElement.style.setProperty('--land-color', settings.landColor);
     atlasTitleText.textContent = settings.atlasTitle;
     atlasSubtitleText.textContent = settings.atlasSubtitle;
     loaderTitle.textContent = settings.atlasTitle;
+    refreshPresentationLayerStyle();
     setBaseMap(settings.mapStyle);
     refreshSettingsForm();
     refreshRouteLayers();
@@ -925,7 +985,9 @@
     [accentColorInput, 'input', () => applySettings({ accentColor: accentColorInput.value })],
     [markerColorInput, 'input', () => applySettings({ markerColor: markerColorInput.value })],
     [routeColorInput, 'input', () => applySettings({ routeColor: routeColorInput.value })],
-    [routeAltColorInput, 'input', () => applySettings({ routeAltColor: routeAltColorInput.value })]
+    [routeAltColorInput, 'input', () => applySettings({ routeAltColor: routeAltColorInput.value })],
+    [seaColorInput, 'input', () => applySettings({ seaColor: seaColorInput.value })],
+    [landColorInput, 'input', () => applySettings({ landColor: landColorInput.value })]
   ].forEach(([el, eventName, handler]) => el.addEventListener(eventName, handler));
 
   function refreshMarkerVisuals() {
@@ -1036,6 +1098,7 @@
     const topo = await resp.json();
     loaderText.textContent = 'Rasterizing land…';
     const land = topojson.feature(topo, topo.objects.land);
+    landFeature = land;
 
     const canvas = document.createElement('canvas');
     canvas.width = GRID_W;
@@ -1081,6 +1144,21 @@
     carveCanal(26.55, 56.25, 26.55, 56.75, 1);   // Hormuz
     carveCanal( 1.20, 103.30,  1.30, 104.10, 1); // Singapore/Malacca south
     carveCanal(55.60, 12.50, 55.80, 12.90, 1);   // Øresund
+    presentationLandLayer = L.geoJSON(landFeature, {
+      pane: 'presentationLand',
+      interactive: false,
+      style: () => ({
+        fillColor: settings.landColor,
+        fillOpacity: 1,
+        color: tintHex(settings.landColor, -0.18),
+        opacity: 0.72,
+        weight: 0.8,
+        className: 'presentation-land'
+      })
+    });
+    if (settings.mapStyle === 'presentation') {
+      setBaseMap('presentation');
+    }
     loaderText.textContent = 'Charts ready.';
   }
 

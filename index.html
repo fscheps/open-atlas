@@ -316,6 +316,8 @@
         <span class="settings-preview-swatch" id="previewMarkerSwatch"></span>
         <span class="settings-preview-swatch" id="previewRouteSwatch"></span>
         <span class="settings-preview-swatch" id="previewAltRouteSwatch"></span>
+        <span class="settings-preview-swatch" id="previewSeaSwatch"></span>
+        <span class="settings-preview-swatch" id="previewLandSwatch"></span>
       </div>
       <div class="settings-preview-note" id="settingsPreviewNote">
         Your exports inherit these type, palette, and tone choices.
@@ -352,10 +354,15 @@
         <div class="settings-field">
           <label for="mapStyleSelect">Base Map</label>
           <select id="mapStyleSelect">
-            <option value="voyager_labels_under">Voyager Labels</option>
-            <option value="positron">Positron</option>
-            <option value="voyager_nolabels">Voyager No Labels</option>
-            <option value="dark_matter">Dark Matter</option>
+            <optgroup label="Presentation">
+              <option value="presentation">Presentation Flat</option>
+            </optgroup>
+            <optgroup label="Tile Basemaps">
+              <option value="voyager_labels_under">Voyager Labels</option>
+              <option value="positron">Positron</option>
+              <option value="voyager_nolabels">Voyager No Labels</option>
+              <option value="dark_matter">Dark Matter</option>
+            </optgroup>
           </select>
         </div>
         <div class="settings-field">
@@ -391,7 +398,16 @@
           <label for="routeAltColorInput">Alternative Route</label>
           <input id="routeAltColorInput" type="color">
         </div>
+        <div class="settings-field">
+          <label for="seaColorInput">Sea</label>
+          <input id="seaColorInput" type="color">
+        </div>
+        <div class="settings-field">
+          <label for="landColorInput">Land</label>
+          <input id="landColorInput" type="color">
+        </div>
       </div>
+      <div class="settings-tip">`Presentation Flat` uses built-in coastlines and your sea and land colors instead of external tile styling.</div>
     </div>
 
     <div class="modal-actions">
@@ -504,6 +520,7 @@
         <div class="help-title"><i class="fa-solid fa-sliders"></i> Studio Settings</div>
         <div class="help-text">
           • Open <strong>Appearance</strong> in the Workspace section to tune fonts, colors, theme mode, and the basemap style<br>
+          • Choose <strong>Presentation Flat</strong> when you want a cleaner editorial export with custom sea and land colors<br>
           • The live preview card shows how your title, palette, and typography will read before you export<br>
           • Atlas title and subtitle are part of your saved JSON and GeoJSON metadata<br>
           • Theme choices are also stored in your browser so the workspace reopens with your preferred look

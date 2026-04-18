@@ -13,6 +13,8 @@
     --route-color: #18567a;
     --route-alt-color: #ca6702;
     --route-glow: rgba(24, 86, 122, 0.24);
+    --sea-color: #d7e7f1;
+    --land-color: #f7f4ea;
     --grid-stroke: rgba(22, 33, 45, 0.04);
     --toast-bg: rgba(22, 33, 45, 0.92);
     --toast-ink: #f7fbff;
@@ -38,6 +40,8 @@
     --route-color: #69b7df;
     --route-alt-color: #ffb457;
     --route-glow: rgba(105, 183, 223, 0.34);
+    --sea-color: #0f2636;
+    --land-color: #21394d;
     --grid-stroke: rgba(151, 183, 212, 0.06);
     --toast-bg: rgba(237, 243, 248, 0.96);
     --toast-ink: #09141f;
@@ -61,7 +65,8 @@
     position: absolute;
     inset: 0;
     z-index: 1;
-    background: var(--bg);
+    background: var(--sea-color);
+    transition: background 0.25s ease;
   }
 
   .panel-toggle {
@@ -999,6 +1004,10 @@
     font-size: 14px;
     line-height: 1.5;
     color: var(--ink-soft);
+  }
+
+  .leaflet-interactive.presentation-land {
+    transition: fill 0.25s ease, stroke 0.25s ease;
   }
 
   .settings-preset-grid {
