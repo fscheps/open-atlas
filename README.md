@@ -88,6 +88,8 @@ JSON exports are the editable source of truth for the app. They include:
 
 Draft autosaves reuse the same atlas shape and live only in the browser via `localStorage`.
 
+The app now writes the canonical `open-atlas` JSON format and still accepts the older prototype-era `mariners-atlas` format on import.
+
 GeoJSON exports are for interoperability. They include:
 
 - point features for ports

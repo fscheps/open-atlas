@@ -172,8 +172,14 @@
   let measurementLayer = null;
   let measurementMeta = null;
   let routeChoiceState = null;
-  const SETTINGS_STORAGE_KEY = 'mariners-atlas-settings-v1';
-  const DRAFT_STORAGE_KEY = 'mariners-atlas-draft-v1';
+  const ATLAS_FORMAT = 'open-atlas';
+  const LEGACY_ATLAS_FORMAT = 'mariners-atlas';
+  const ATLAS_GEOJSON_FORMAT = 'open-atlas-geojson';
+  const ATLAS_VERSION = 3;
+  const SETTINGS_STORAGE_KEY = 'open-atlas-settings-v2';
+  const LEGACY_SETTINGS_STORAGE_KEY = 'mariners-atlas-settings-v1';
+  const DRAFT_STORAGE_KEY = 'open-atlas-draft-v2';
+  const LEGACY_DRAFT_STORAGE_KEY = 'mariners-atlas-draft-v1';
   const UI_STORAGE_KEY = 'open-atlas-ui-v1';
   const DEFAULT_VIEW = {
     center: [25, -30],
@@ -380,11 +386,29 @@
     };
   }
 
+  function isSupportedAtlasFormat(format) {
+    return format === ATLAS_FORMAT || format === LEGACY_ATLAS_FORMAT;
+  }
+
+  function normalizeAtlasFormat(data) {
+    if (!data || typeof data !== 'object') return null;
+    if (!isSupportedAtlasFormat(data.format) || !Array.isArray(data.ports)) return null;
+    return {
+      ...data,
+      format: ATLAS_FORMAT,
+      version: typeof data.version === 'number' ? Math.max(data.version, ATLAS_VERSION) : ATLAS_VERSION
+    };
+  }
+
   function loadStoredSettings() {
     try {
-      const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+      const raw = localStorage.getItem(SETTINGS_STORAGE_KEY) || localStorage.getItem(LEGACY_SETTINGS_STORAGE_KEY);
       if (!raw) return null;
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (localStorage.getItem(LEGACY_SETTINGS_STORAGE_KEY) && !localStorage.getItem(SETTINGS_STORAGE_KEY)) {
+        localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(parsed));
+      }
+      return parsed;
     } catch (err) {
       console.warn('Failed to parse stored settings', err);
       return null;
@@ -413,6 +437,7 @@
   function saveStoredSettings() {
     try {
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+      localStorage.removeItem(LEGACY_SETTINGS_STORAGE_KEY);
     } catch (err) {
       console.warn('Failed to persist settings', err);
     }
@@ -460,10 +485,13 @@
 
   function loadStoredDraft() {
     try {
-      const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+      const raw = localStorage.getItem(DRAFT_STORAGE_KEY) || localStorage.getItem(LEGACY_DRAFT_STORAGE_KEY);
       if (!raw) return null;
-      const data = JSON.parse(raw);
-      if (!data || data.format !== 'mariners-atlas' || !Array.isArray(data.ports)) return null;
+      const data = normalizeAtlasFormat(JSON.parse(raw));
+      if (!data) return null;
+      if (localStorage.getItem(LEGACY_DRAFT_STORAGE_KEY) && !localStorage.getItem(DRAFT_STORAGE_KEY)) {
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(data));
+      }
       return data;
     } catch (err) {
       console.warn('Failed to parse stored draft', err);
@@ -502,6 +530,7 @@
     }
     try {
       localStorage.removeItem(DRAFT_STORAGE_KEY);
+      localStorage.removeItem(LEGACY_DRAFT_STORAGE_KEY);
     } catch (err) {
       console.warn('Failed to remove stored draft', err);
     }
@@ -2189,8 +2218,8 @@
   function buildAtlasState(opts) {
     const options = opts || {};
     const atlasState = {
-      format: 'mariners-atlas',
-      version: 2,
+      format: ATLAS_FORMAT,
+      version: ATLAS_VERSION,
       view: {
         center: [map.getCenter().lat, map.getCenter().lng],
         zoom: map.getZoom()
@@ -2228,17 +2257,22 @@
 
   function applyAtlasState(data, opts) {
     const options = opts || {};
+    const normalizedData = normalizeAtlasFormat(data);
+    if (!normalizedData) {
+      showHint('Import failed — invalid atlas data.');
+      return;
+    }
 
     withAutosaveSuspended(() => {
       withHistorySuspended(() => {
         clearAll({ skipDraftSave: true, skipHistorySave: true });
 
-        if (data.settings) {
-          applySettings({ ...DEFAULT_SETTINGS, ...data.settings }, { recordDraft: false, recordHistory: false });
+        if (normalizedData.settings) {
+          applySettings({ ...DEFAULT_SETTINGS, ...normalizedData.settings }, { recordDraft: false, recordHistory: false });
         }
 
         const idMap = {};
-        (data.ports || []).forEach((p) => {
+        (normalizedData.ports || []).forEach((p) => {
           const latlng = L.latLng(p.lat, p.lng);
           const entry = addMarker(latlng, p.name || 'Port', {
             id: p.id,
@@ -2253,7 +2287,7 @@
           idMap[p.id] = entry;
         });
 
-        (data.routes || []).forEach((r) => {
+        (normalizedData.routes || []).forEach((r) => {
           const a = idMap[r.fromId];
           const b = idMap[r.toId];
           if (!a || !b) return;
@@ -2262,8 +2296,8 @@
           commitRoute(a, b, latlngs, km, r.variant || 'primary');
         });
 
-        if (data.view && Array.isArray(data.view.center)) {
-          map.setView(data.view.center, data.view.zoom || map.getZoom());
+        if (normalizedData.view && Array.isArray(normalizedData.view.center)) {
+          map.setView(normalizedData.view.center, normalizedData.view.zoom || map.getZoom());
         } else {
           map.setView(DEFAULT_VIEW.center, DEFAULT_VIEW.zoom);
         }
@@ -2271,7 +2305,7 @@
     });
 
     if (options.source === 'draft') {
-      storedDraft = data;
+      storedDraft = normalizedData;
       refreshDraftUi();
       saveHistoryNow();
       showHint(`Draft restored — ${markers.length} ports, ${routes.length} routes.`);
@@ -2293,7 +2327,7 @@
     return {
       type: 'FeatureCollection',
       metadata: {
-        format: 'mariners-atlas-geojson',
+        format: ATLAS_GEOJSON_FORMAT,
         version: 1,
         exported: atlasState.exported,
         atlasTitle: atlasState.settings.atlasTitle,
@@ -2412,8 +2446,8 @@
   async function importJSONFile(file) {
     try {
       const text = await file.text();
-      const data = JSON.parse(text);
-      if (!data || data.format !== 'mariners-atlas' || !Array.isArray(data.ports)) {
+      const data = normalizeAtlasFormat(JSON.parse(text));
+      if (!data) {
         showHint('Invalid atlas JSON file.');
         return;
       }

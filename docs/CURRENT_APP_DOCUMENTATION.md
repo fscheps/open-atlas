@@ -100,8 +100,8 @@ The editable atlas export shape currently includes:
 
 ```json
 {
-  "format": "mariners-atlas",
-  "version": 2,
+  "format": "open-atlas",
+  "version": 3,
   "exported": "ISO timestamp",
   "view": {
     "center": [25, -30],
@@ -142,11 +142,11 @@ The editable atlas export shape currently includes:
 
 Notes:
 
-- `version` is currently `2`
+- `version` is currently `3`
 - JSON is the source-of-truth editable format
 - GeoJSON is an export convenience format, not the primary editable schema
 - draft autosaves reuse the same atlas shape plus a `draftSavedAt` timestamp
-- exported filenames currently use the `open-atlas-...` prefix, while the JSON `format` field remains `mariners-atlas` for backward compatibility
+- the app still accepts legacy `mariners-atlas` JSON on import and during browser draft migration
 
 ## Main code areas in `assets/scripts/app.js`
 
