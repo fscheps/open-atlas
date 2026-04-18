@@ -31,11 +31,11 @@
 
   map.createPane('presentationLand');
   map.getPane('presentationLand').style.zIndex = 250;
-  const BUBBLE_DEFAULT_WIDTH = 236;
-  const BUBBLE_MIN_WIDTH = 152;
+  const BUBBLE_DEFAULT_WIDTH = 204;
+  const BUBBLE_MIN_WIDTH = 124;
   const BUBBLE_MAX_WIDTH = 520;
-  const BUBBLE_DEFAULT_HEIGHT = 172;
-  const BUBBLE_MIN_HEIGHT = 92;
+  const BUBBLE_DEFAULT_HEIGHT = 118;
+  const BUBBLE_MIN_HEIGHT = 68;
   const BUBBLE_MAX_HEIGHT = 420;
   const BUBBLE_DEFAULT_RIGHT_OFFSET = 76;
   const BUBBLE_DEFAULT_LEFT_GAP = 56;
@@ -45,6 +45,32 @@
   const BUBBLE_VIEW_MARGIN = 12;
   const bubbleOverlay = L.DomUtil.create('div', 'bubble-overlay', map.getContainer());
   bubbleOverlay.setAttribute('aria-hidden', 'true');
+  const bubbleResizeObserver = typeof ResizeObserver === 'function'
+    ? new ResizeObserver((entries) => {
+      entries.forEach(({ target, contentRect }) => {
+        const id = Number(target.dataset.bubbleId);
+        if (!Number.isFinite(id)) return;
+        const entry = findPort(id);
+        if (!entry || entry._applyingBubbleLayout) return;
+        const width = Math.round(contentRect.width);
+        const height = Math.round(contentRect.height);
+        if (
+          entry._lastAppliedBubbleSize
+          && Math.abs(entry._lastAppliedBubbleSize.width - width) < 2
+          && Math.abs(entry._lastAppliedBubbleSize.height - height) < 2
+        ) {
+          return;
+        }
+        entry.bubbleWidthUserSized = true;
+        entry.bubbleHeightUserSized = true;
+        const layout = getBubbleLayout(entry, { width, height });
+        persistBubbleLayout(entry, layout);
+        updateBubbleContent(entry);
+        scheduleDraftSave();
+        scheduleHistorySnapshot();
+      });
+    })
+    : null;
 
   function refreshPresentationLayerStyle() {
     if (!presentationLandLayer) return;
@@ -212,7 +238,7 @@
   const ATLAS_FORMAT = 'open-atlas';
   const LEGACY_ATLAS_FORMAT = 'mariners-atlas';
   const ATLAS_GEOJSON_FORMAT = 'open-atlas-geojson';
-  const ATLAS_VERSION = 7;
+  const ATLAS_VERSION = 8;
   const SETTINGS_STORAGE_KEY = 'open-atlas-settings-v2';
   const LEGACY_SETTINGS_STORAGE_KEY = 'mariners-atlas-settings-v1';
   const DRAFT_STORAGE_KEY = 'open-atlas-draft-v2';
@@ -604,11 +630,15 @@
   }
 
   function estimateBubbleWidth(name, details) {
-    const content = `${name || ''}\n${details || ''}`.trim();
-    const longestLine = content
-      .split('\n')
-      .reduce((max, line) => Math.max(max, line.trim().length), 0);
-    const estimated = 184 + longestLine * 3.2;
+    const rawLines = [`${name || ''}`, ...String(details || '').split('\n')]
+      .map(line => line.trim())
+      .filter(Boolean);
+    const longestLine = rawLines.reduce((max, line) => Math.max(max, line.length), 0);
+    const longestWord = rawLines
+      .flatMap(line => line.split(/\s+/))
+      .reduce((max, word) => Math.max(max, word.length), 0);
+    const detailWeight = Math.min(56, String(details || '').trim().length * 0.18);
+    const estimated = 128 + longestLine * 4.8 + longestWord * 1.6 + detailWeight;
     return normalizeBubbleWidth(estimated) || BUBBLE_DEFAULT_WIDTH;
   }
 
@@ -1212,15 +1242,17 @@
       markerColor: pointStyle.markerColor,
       details: opts.details || '',
       bubbleVisible: false,
-      bubbleWidth: normalizeBubbleWidth(opts.bubbleWidth) || estimateBubbleWidth(name, opts.details || ''),
-      bubbleHeight: normalizeBubbleHeight(opts.bubbleHeight) || estimateBubbleHeight({ details: opts.details || '' }),
+      bubbleWidthUserSized: !!opts.bubbleWidthUserSized,
+      bubbleHeightUserSized: !!opts.bubbleHeightUserSized,
+      bubbleWidth: !!opts.bubbleWidthUserSized ? normalizeBubbleWidth(opts.bubbleWidth) : null,
+      bubbleHeight: !!opts.bubbleHeightUserSized ? normalizeBubbleHeight(opts.bubbleHeight) : null,
       bubbleOffset: normalizeBubbleOffset({
         x: opts.bubbleOffsetX,
         y: opts.bubbleOffsetY
       }) || bubbleOffsetFromLegacyLatLng(
         L.latLng(latlng.lat, latlng.lng),
         opts.bubbleLatLng ? L.latLng(opts.bubbleLatLng.lat, opts.bubbleLatLng.lng) : null,
-        normalizeBubbleWidth(opts.bubbleWidth) || BUBBLE_DEFAULT_WIDTH
+        normalizeBubbleWidth(opts.bubbleWidth) || estimateBubbleWidth(name, opts.details || '')
       ),
       bubble: null,
       bubbleInteractable: null
@@ -1252,10 +1284,44 @@
   const portEditColorPicker = document.getElementById('portEditColorPicker');
   const portEditDetails = document.getElementById('portEditDetails');
   const bubbleToggle = document.getElementById('bubbleToggle');
+  const bubbleSizeControls = document.getElementById('bubbleSizeControls');
+  const bubbleAutoFitBtn = document.getElementById('bubbleAutoFitBtn');
+  const bubbleWidthRange = document.getElementById('bubbleWidthRange');
+  const bubbleHeightRange = document.getElementById('bubbleHeightRange');
+  const bubbleWidthValue = document.getElementById('bubbleWidthValue');
+  const bubbleHeightValue = document.getElementById('bubbleHeightValue');
   const portSaveBtn = document.getElementById('portSaveBtn');
   const portCancelBtn = document.getElementById('portCancelBtn');
   const portDeleteBtn = document.getElementById('portDeleteBtn');
   let editingPort = null;
+  let editingBubbleWidthUserSized = false;
+  let editingBubbleHeightUserSized = false;
+
+  function getEditingBubblePreviewState() {
+    return {
+      name: (portEditName.value || editingPort?.name || '').trim(),
+      details: portEditDetails.value || editingPort?.details || ''
+    };
+  }
+
+  function refreshBubbleSizingUi() {
+    const preview = getEditingBubblePreviewState();
+    const autoWidth = estimateBubbleWidth(preview.name, preview.details);
+    const width = editingBubbleWidthUserSized
+      ? normalizeBubbleWidth(Number(bubbleWidthRange.value)) || autoWidth
+      : autoWidth;
+    const autoHeight = estimateBubbleHeight(preview, width);
+    const height = editingBubbleHeightUserSized
+      ? normalizeBubbleHeight(Number(bubbleHeightRange.value)) || autoHeight
+      : autoHeight;
+
+    bubbleWidthRange.value = String(width);
+    bubbleHeightRange.value = String(height);
+    bubbleWidthValue.textContent = editingBubbleWidthUserSized ? `${width}px` : `Auto ${width}px`;
+    bubbleHeightValue.textContent = editingBubbleHeightUserSized ? `${height}px` : `Auto ${height}px`;
+
+    bubbleSizeControls.classList.toggle('is-disabled', !bubbleToggle.checked);
+  }
 
   function openPortModal(entry) {
     editingPort = entry;
@@ -1270,6 +1336,11 @@
     refreshEditingPointStyleUi();
     portEditDetails.value = entry.details || '';
     bubbleToggle.checked = !!entry.bubbleVisible;
+    editingBubbleWidthUserSized = !!entry.bubbleWidthUserSized;
+    editingBubbleHeightUserSized = !!entry.bubbleHeightUserSized;
+    bubbleWidthRange.value = String(getBubbleWidth(entry));
+    bubbleHeightRange.value = String(getBubbleHeight(entry));
+    refreshBubbleSizingUi();
     portModal.classList.add('show');
     setTimeout(() => portEditName.focus(), 60);
   }
@@ -1278,6 +1349,8 @@
     portModal.classList.remove('show');
     editingPort = null;
     editingPointStyle = null;
+    editingBubbleWidthUserSized = false;
+    editingBubbleHeightUserSized = false;
   }
 
   if (pointTypeInput) {
@@ -1300,6 +1373,8 @@
     const newName = (portEditName.value || '').trim() || editingPort.name;
     const newDetails = portEditDetails.value || '';
     const wantBubble = bubbleToggle.checked;
+    const bubbleWidth = editingBubbleWidthUserSized ? normalizeBubbleWidth(Number(bubbleWidthRange.value)) : null;
+    const bubbleHeight = editingBubbleHeightUserSized ? normalizeBubbleHeight(Number(bubbleHeightRange.value)) : null;
     editingPort.pointType = normalizePointType(editingPointStyle.pointType);
     editingPort.iconKey = normalizePointIcon(editingPointStyle.iconKey);
     editingPort.markerColor = normalizePointColor(editingPointStyle.markerColor);
@@ -1307,6 +1382,10 @@
     const renamed = newName !== editingPort.name;
     editingPort.name = newName;
     editingPort.details = newDetails;
+    editingPort.bubbleWidthUserSized = editingBubbleWidthUserSized;
+    editingPort.bubbleHeightUserSized = editingBubbleHeightUserSized;
+    editingPort.bubbleWidth = bubbleWidth;
+    editingPort.bubbleHeight = bubbleHeight;
 
     if (renamed) {
       editingPort.marker.unbindTooltip();
@@ -1351,11 +1430,16 @@
 
   /* ===== Info bubble ===== */
   function getBubbleWidth(entry) {
-    return normalizeBubbleWidth(entry.bubbleWidth) || BUBBLE_DEFAULT_WIDTH;
+    if (hasManualBubbleWidth(entry)) return normalizeBubbleWidth(entry.bubbleWidth) || BUBBLE_DEFAULT_WIDTH;
+    return estimateBubbleWidth(entry.name, entry.details || '') || BUBBLE_DEFAULT_WIDTH;
   }
 
   function getBubbleHeight(entry) {
-    return normalizeBubbleHeight(entry.bubbleHeight) || estimateBubbleHeight(entry) || BUBBLE_DEFAULT_HEIGHT;
+    const width = getBubbleWidth(entry);
+    if (hasManualBubbleHeight(entry)) {
+      return normalizeBubbleHeight(entry.bubbleHeight) || estimateBubbleHeight(entry, width) || BUBBLE_DEFAULT_HEIGHT;
+    }
+    return estimateBubbleHeight(entry, width) || BUBBLE_DEFAULT_HEIGHT;
   }
 
   function getMarkerRect(entry) {
@@ -1394,11 +1478,28 @@
     return offset;
   }
 
-  function estimateBubbleHeight(entry) {
-    const detailLines = String(entry.details || '')
-      .split('\n')
-      .reduce((count, line) => count + Math.max(1, Math.ceil(line.length / 22)), 0);
-    return clamp(BUBBLE_DEFAULT_HEIGHT + detailLines * 20, 132, 320);
+  function estimateBubbleHeight(entry, width = BUBBLE_DEFAULT_WIDTH) {
+    const name = String(entry.name || '').trim();
+    const detailLinesRaw = String(entry.details || '').split('\n');
+    const titleCharsPerLine = Math.max(7, Math.floor((width - 26) / 10.5));
+    const bodyCharsPerLine = Math.max(10, Math.floor((width - 28) / 8.1));
+    const titleLines = Math.max(1, Math.ceil(Math.max(1, name.length) / titleCharsPerLine));
+    const detailLines = detailLinesRaw.reduce((count, line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return count + 1;
+      return count + Math.max(1, Math.ceil(trimmed.length / bodyCharsPerLine));
+    }, 0);
+    const bodyBlock = Math.max(1, detailLines);
+    const estimated = 18 + titleLines * 19 + bodyBlock * 22 + 26;
+    return clamp(estimated, BUBBLE_MIN_HEIGHT, 320);
+  }
+
+  function hasManualBubbleWidth(entry) {
+    return !!entry.bubbleWidthUserSized && normalizeBubbleWidth(entry.bubbleWidth) != null;
+  }
+
+  function hasManualBubbleHeight(entry) {
+    return !!entry.bubbleHeightUserSized && normalizeBubbleHeight(entry.bubbleHeight) != null;
   }
 
   function getBubbleTypography(entry, layout) {
@@ -1427,11 +1528,11 @@
       padTop: Math.round(clamp(10, 12 + heightRatio * 4 - compactness * 1.5, 18)),
       padBottom: Math.round(clamp(10, 14 + heightRatio * 4 - compactness * 2.1, 20)),
       gap: Math.round(clamp(4, 6 + heightRatio * 3 - compactness * 2.2, 10)),
-      titleSize: Math.round(clamp(9.2, 10 + sizeRatio * 1 - textPressure * 0.35, 11.8) * 10) / 10,
+      titleSize: Math.round(clamp(8, 9.6 + sizeRatio * 1 - textPressure * 0.45, 11.8) * 10) / 10,
       titleSpacing: Math.round(clamp(1.05, 1.45 + sizeRatio * 0.22 - textPressure * 0.1, 1.78) * 100) / 100,
-      bodySize: Math.round(clamp(12.2, 13.6 + sizeRatio * 1.7 - textPressure * 1.18, 16.8) * 10) / 10,
-      lineHeight: Math.round(clamp(1.18, 1.3 + sizeRatio * 0.08 - textPressure * 0.08, 1.44) * 100) / 100,
-      bodyRight: Math.round(clamp(8, 10 + widthRatio * 4 - compactness * 1.6, 18))
+      bodySize: Math.round(clamp(10.8, 13.2 + sizeRatio * 1.6 - textPressure * 1.34, 16.8) * 10) / 10,
+      lineHeight: Math.round(clamp(1.12, 1.28 + sizeRatio * 0.08 - textPressure * 0.09, 1.44) * 100) / 100,
+      bodyRight: Math.round(clamp(6, 10 + widthRatio * 4 - compactness * 2.1, 18))
     };
   }
 
@@ -1531,13 +1632,19 @@
     const anchorPoint = map.latLngToContainerPoint(entry.latlng);
     const maxWidth = Math.max(BUBBLE_MIN_WIDTH, size.x - BUBBLE_VIEW_MARGIN * 2);
     const maxHeight = Math.max(BUBBLE_MIN_HEIGHT, size.y - BUBBLE_VIEW_MARGIN * 2);
+    const requestedWidth = options.width != null
+      ? normalizeBubbleWidth(options.width)
+      : getBubbleWidth(entry);
     const width = Math.round(clamp(
-      normalizeBubbleWidth(options.width != null ? options.width : entry.bubbleWidth) || BUBBLE_DEFAULT_WIDTH,
+      requestedWidth || BUBBLE_DEFAULT_WIDTH,
       BUBBLE_MIN_WIDTH,
       maxWidth
     ));
+    const requestedHeight = options.height != null
+      ? normalizeBubbleHeight(options.height)
+      : getBubbleHeight(entry);
     const height = Math.round(clamp(
-      normalizeBubbleHeight(options.height != null ? options.height : entry.bubbleHeight) || estimateBubbleHeight(entry),
+      requestedHeight || estimateBubbleHeight(entry, width),
       BUBBLE_MIN_HEIGHT,
       maxHeight
     ));
@@ -1580,7 +1687,7 @@
           <div class="bubble-title"></div>
           <div class="bubble-handle"><i class="fa-solid fa-up-down-left-right"></i></div>
           <div class="bubble-body"></div>
-          <div class="bubble-resize-grip" aria-hidden="true"></div>
+          <button class="bubble-resize-grip" type="button" tabindex="-1" aria-label="Resize callout"></button>
         </div>
       `;
       tailSvg = entry.bubble.querySelector('.bubble-tail-svg');
@@ -1613,6 +1720,8 @@
     dom.card.style.top = `${layout.top}px`;
     dom.card.style.width = `${layout.width}px`;
     dom.card.style.height = `${layout.height}px`;
+    entry._applyingBubbleLayout = true;
+    entry._lastAppliedBubbleSize = { width: layout.width, height: layout.height };
     const typography = getBubbleTypography(entry, layout);
     dom.card.style.setProperty('--bubble-pad-x', `${typography.padX}px`);
     dom.card.style.setProperty('--bubble-pad-top', `${typography.padTop}px`);
@@ -1627,12 +1736,19 @@
     const bodyEl = dom.card.querySelector('.bubble-body');
     if (titleEl) titleEl.textContent = name;
     if (bodyEl) bodyEl.innerHTML = safeDetails;
+    requestAnimationFrame(() => {
+      entry._applyingBubbleLayout = false;
+    });
   }
 
   function persistBubbleLayout(entry, layout) {
     entry.bubbleOffset = normalizeBubbleOffset(layout.offset);
-    entry.bubbleWidth = normalizeBubbleWidth(layout.width) || BUBBLE_DEFAULT_WIDTH;
-    entry.bubbleHeight = normalizeBubbleHeight(layout.height) || estimateBubbleHeight(entry);
+    entry.bubbleWidth = hasManualBubbleWidth(entry)
+      ? normalizeBubbleWidth(layout.width) || BUBBLE_DEFAULT_WIDTH
+      : null;
+    entry.bubbleHeight = hasManualBubbleHeight(entry)
+      ? normalizeBubbleHeight(layout.height) || estimateBubbleHeight(entry, layout.width)
+      : null;
   }
 
   function teardownBubbleInteraction(entry) {
@@ -1658,7 +1774,7 @@
     });
     const interactable = interact(card)
       .draggable({
-        ignoreFrom: '.bubble-resize-grip',
+        allowFrom: '.bubble-title, .bubble-handle, .bubble-body',
         listeners: {
           start() {
             map.dragging.disable();
@@ -1678,13 +1794,15 @@
     entry.bubbleInteractable = interactable;
 
     if (grip) {
-      grip.onpointerdown = (event) => {
+      const startResize = (event) => {
         event.preventDefault();
         event.stopPropagation();
         const startX = event.clientX;
         const startY = event.clientY;
         const startWidth = getBubbleWidth(entry);
         const startHeight = getBubbleHeight(entry);
+        entry.bubbleWidthUserSized = true;
+        entry.bubbleHeightUserSized = true;
         map.dragging.disable();
 
         const onMove = (moveEvent) => {
@@ -1697,16 +1815,23 @@
         };
 
         const onUp = () => {
+          window.removeEventListener('mousemove', onMove);
           window.removeEventListener('pointermove', onMove);
+          window.removeEventListener('mouseup', onUp);
           window.removeEventListener('pointerup', onUp);
           window.removeEventListener('pointercancel', onUp);
           finish();
         };
 
+        window.addEventListener('mousemove', onMove);
         window.addEventListener('pointermove', onMove);
+        window.addEventListener('mouseup', onUp);
         window.addEventListener('pointerup', onUp);
         window.addEventListener('pointercancel', onUp);
       };
+
+      grip.addEventListener('mousedown', startResize);
+      grip.addEventListener('pointerdown', startResize);
     }
   }
 
@@ -1734,12 +1859,20 @@
     const layout = getBubbleLayout(entry);
     persistBubbleLayout(entry, layout);
     applyBubbleDom(entry, layout);
+    if (bubbleResizeObserver) {
+      const card = entry.bubble.querySelector('.info-bubble');
+      if (card) bubbleResizeObserver.observe(card);
+    }
     if (!entry.bubbleInteractable) initBubbleInteraction(entry);
   }
 
   function hideBubble(entry) {
     entry.bubbleVisible = false;
     if (entry.bubble) {
+      if (bubbleResizeObserver) {
+        const card = entry.bubble.querySelector('.info-bubble');
+        if (card) bubbleResizeObserver.unobserve(card);
+      }
       teardownBubbleInteraction(entry);
       entry.bubble.remove();
       entry.bubble = null;
@@ -1760,8 +1893,30 @@
     if (e.key === 'Enter') { e.preventDefault(); portEditDetails.focus(); }
     else if (e.key === 'Escape') { closePortModal(); }
   });
+  portEditName.addEventListener('input', () => {
+    if (!editingPort) return;
+    if (!editingBubbleWidthUserSized || !editingBubbleHeightUserSized) refreshBubbleSizingUi();
+  });
   portEditDetails.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { closePortModal(); }
+  });
+  portEditDetails.addEventListener('input', () => {
+    if (!editingPort) return;
+    if (!editingBubbleWidthUserSized || !editingBubbleHeightUserSized) refreshBubbleSizingUi();
+  });
+  bubbleToggle.addEventListener('change', refreshBubbleSizingUi);
+  bubbleWidthRange.addEventListener('input', () => {
+    editingBubbleWidthUserSized = true;
+    refreshBubbleSizingUi();
+  });
+  bubbleHeightRange.addEventListener('input', () => {
+    editingBubbleHeightUserSized = true;
+    refreshBubbleSizingUi();
+  });
+  bubbleAutoFitBtn.addEventListener('click', () => {
+    editingBubbleWidthUserSized = false;
+    editingBubbleHeightUserSized = false;
+    refreshBubbleSizingUi();
   });
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
@@ -3156,8 +3311,10 @@
         markerColor: m.markerColor,
         details: m.details || '',
         bubbleVisible: !!m.bubbleVisible,
-        bubbleWidth: getBubbleWidth(m),
-        bubbleHeight: getBubbleHeight(m),
+        bubbleWidth: hasManualBubbleWidth(m) ? getBubbleWidth(m) : null,
+        bubbleHeight: hasManualBubbleHeight(m) ? getBubbleHeight(m) : null,
+        bubbleWidthUserSized: !!m.bubbleWidthUserSized,
+        bubbleHeightUserSized: !!m.bubbleHeightUserSized,
         bubbleOffsetX: getBubbleOffset(m).x,
         bubbleOffsetY: getBubbleOffset(m).y,
         bubbleLat: m.bubbleVisible ? getLegacyBubbleLatLng(m).lat : null,
@@ -3216,6 +3373,8 @@
             bubbleVisible: !!p.bubbleVisible,
             bubbleWidth: p.bubbleWidth,
             bubbleHeight: p.bubbleHeight,
+            bubbleWidthUserSized: !!p.bubbleWidthUserSized,
+            bubbleHeightUserSized: !!p.bubbleHeightUserSized,
             bubbleOffsetX: p.bubbleOffsetX,
             bubbleOffsetY: p.bubbleOffsetY,
             bubbleLatLng: (p.bubbleLat != null && p.bubbleLng != null)

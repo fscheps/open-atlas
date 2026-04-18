@@ -14,9 +14,9 @@ Open Atlas is a static, open-source map storytelling app built for easy sharing 
 - Add airport-ready directional air routes when connecting two airport points
 - Choose point icons and per-point colors for clearer map storytelling
 - Classify points as `Port`, `City`, `Airport`, or generic `Location`
-- Drag and resize map callouts freely while keeping them anchored to their points
+- Drag map callouts freely while keeping them anchored to their points
 - Switch between `Subtle`, `Editorial`, and `Bold` callout treatments
-- Let callout text compact itself as the callout is resized smaller
+- Let short callouts auto-fit their content, then fine-tune width and height from the point details modal
 - Use the studio comfortably on desktop, tablet, and mobile layouts
 - Save and reopen atlases as JSON for continued editing
 - Autosave local drafts and restore them later from the control panel

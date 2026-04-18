@@ -634,9 +634,9 @@
     font-size: var(--bubble-body-size, 15px);
     line-height: var(--bubble-body-line-height, 1.4);
     box-shadow: 0 12px 28px rgba(0,0,0,0.22);
-    cursor: move;
-    min-width: 152px;
-    min-height: 92px;
+    cursor: default;
+    min-width: 124px;
+    min-height: 68px;
     white-space: pre-wrap;
     word-wrap: break-word;
     backdrop-filter: blur(3px);
@@ -680,6 +680,7 @@
     color: var(--bubble-accent);
     font-weight: 600;
     margin: 0;
+    cursor: move;
   }
   .bubble-body {
     padding-right: var(--bubble-body-right, 18px);
@@ -688,21 +689,42 @@
     overflow: auto;
     overflow-wrap: anywhere;
     word-break: break-word;
+    cursor: move;
   }
   .bubble-resize-grip {
     position: absolute;
-    right: 8px;
-    bottom: 8px;
-    width: 18px;
-    height: 18px;
+    right: 3px;
+    bottom: 3px;
+    width: 30px;
+    height: 30px;
+    display: block;
+    padding: 0;
+    border: none;
     border-radius: 999px;
     background:
-      linear-gradient(135deg, transparent 0 42%, rgba(0,0,0,0.18) 42% 52%, transparent 52% 100%),
-      linear-gradient(135deg, transparent 0 62%, rgba(0,0,0,0.28) 62% 72%, transparent 72% 100%);
-    cursor: nwse-resize;
-    opacity: 0.72;
+      linear-gradient(135deg, transparent 0 46%, rgba(0,0,0,0.16) 46% 54%, transparent 54% 100%),
+      linear-gradient(135deg, transparent 0 64%, rgba(0,0,0,0.28) 64% 72%, transparent 72% 100%);
+    cursor: se-resize;
+    opacity: 0.88;
     touch-action: none;
     z-index: 3;
+    pointer-events: auto;
+    appearance: none;
+  }
+
+  .bubble-resize-grip::before {
+    content: '';
+    position: absolute;
+    inset: 5px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(0,0,0,0.06));
+    opacity: 0.26;
+  }
+
+  html.dark .bubble-resize-grip {
+    background:
+      linear-gradient(135deg, transparent 0 46%, rgba(255,255,255,0.18) 46% 54%, transparent 54% 100%),
+      linear-gradient(135deg, transparent 0 64%, rgba(255,255,255,0.34) 64% 72%, transparent 72% 100%);
   }
 
   .settings-preview[data-callout-style="subtle"] {
@@ -917,6 +939,80 @@
     color: var(--ink-soft);
     margin-top: 14px;
     display: block;
+  }
+
+  .bubble-size-controls {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--panel-muted);
+  }
+
+  .bubble-size-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .bubble-size-title {
+    margin: 0;
+  }
+
+  .bubble-size-row {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr) 58px;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-family: var(--font-ui);
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+
+  .bubble-size-row:last-of-type {
+    margin-bottom: 8px;
+  }
+
+  .bubble-size-row label {
+    color: var(--ink);
+  }
+
+  .bubble-size-row input[type="range"] {
+    width: 100%;
+    margin: 0;
+    accent-color: var(--accent);
+  }
+
+  .bubble-size-row span {
+    text-align: right;
+    color: var(--ink-soft);
+  }
+
+  .mini-link-btn {
+    border: none;
+    background: transparent;
+    color: var(--accent);
+    font-family: var(--font-ui);
+    font-size: 11px;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .mini-link-btn:hover {
+    color: var(--accent-hover);
+  }
+
+  .bubble-size-controls.is-disabled {
+    opacity: 0.58;
+  }
+
+  .bubble-size-controls.is-disabled .mini-link-btn,
+  .bubble-size-controls.is-disabled input {
+    pointer-events: none;
   }
 
   /* Hide UI during export */

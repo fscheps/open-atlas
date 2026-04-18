@@ -247,6 +247,24 @@
       <label for="bubbleToggle">Display info bubble on map</label>
     </div>
 
+    <div class="bubble-size-controls" id="bubbleSizeControls">
+      <div class="bubble-size-header">
+        <span class="field-label bubble-size-title">Bubble Size</span>
+        <button class="mini-link-btn" id="bubbleAutoFitBtn" type="button">Auto fit</button>
+      </div>
+      <div class="bubble-size-row">
+        <label for="bubbleWidthRange">Width</label>
+        <input id="bubbleWidthRange" type="range" min="124" max="520" step="4">
+        <span id="bubbleWidthValue">Auto</span>
+      </div>
+      <div class="bubble-size-row">
+        <label for="bubbleHeightRange">Height</label>
+        <input id="bubbleHeightRange" type="range" min="68" max="420" step="4">
+        <span id="bubbleHeightValue">Auto</span>
+      </div>
+      <div class="settings-tip">Short notes now auto-fit. Use these controls when you want the callout to be wider, taller, or reset back to compact sizing.</div>
+    </div>
+
     <div class="modal-actions">
       <button class="btn btn-danger" id="portDeleteBtn" style="margin-right:auto;">
         <i class="fa-solid fa-trash"></i> <span id="deletePointLabel">Delete Port</span>
@@ -541,7 +559,8 @@
           • Check <strong>"Display info bubble on map"</strong> to show a callout<br>
           • The bubble appears as a callout anchored to the point so it reads like an annotation, not a floating card<br>
           • <strong>Drag the bubble</strong> to reposition it relative to the point and keep important map details visible<br>
-          • Use the small handle in the lower-right corner to resize the bubble in both width and height<br>
+          • Short notes auto-fit to a compact bubble by default<br>
+          • Use the <strong>Bubble Size</strong> controls in the point details modal to make the callout wider, taller, or reset it to auto-fit<br>
           • Uncheck the box and save to hide the bubble
         </div>
       </div>

@@ -21,7 +21,7 @@ Current completion snapshot:
   - point-type metadata for ports, cities, airports, and generic locations
 - `C1`, `C2`, and `C3` (presentation style + sea/land controls) are already live and should be treated as complete.
 - `B8` search copy cleanup is now implemented.
-- `C4` annotation contrast and placement cleanup is now live with draggable/resizable callouts, callout style presets, and adaptive callout typography.
+- `C4` annotation contrast and placement cleanup is now live with draggable callouts, modal size controls, callout style presets, and adaptive callout typography.
 - Remaining tasks keep the same IDs and are still open.
 
 ## Track A: Open-source transparency

@@ -11,7 +11,7 @@ Open Atlas is a static browser application for building visual map atlases with:
 - maritime routes generated client-side
 - straight or curved-arc connections for network and flight-style maps
 - airport-aware directional air-route presentation inside `Connections` mode
-- notes and draggable, resizable annotation bubbles
+- notes and draggable annotation bubbles with auto-fit plus manual size controls
 - draft autosave
 - undo and redo
 - PNG export with framing and quality controls
@@ -50,11 +50,11 @@ The project is intentionally:
 - Edit names and notes
 - Classify points as `port`, `city`, `airport`, or `location`
 - Choose per-point icons and colors
-- Toggle draggable and resizable info bubbles
+- Toggle draggable info bubbles
 - Move callouts freely around the visible map while their tails stay anchored to the selected point
-- Resize callouts in both width and height
+- Adjust callout width and height from the point details modal
 - Adjust callout style between `Subtle`, `Editorial`, and `Bold`
-- Let callout typography compact itself as the callout shrinks
+- Let short callouts auto-fit their content while still allowing manual size overrides
 - Search saved locations by name or notes
 - Measure straight-line distance
 
@@ -161,8 +161,10 @@ The editable atlas export shape currently includes:
       "markerColor": "#0b7a75",
       "details": "",
       "bubbleVisible": false,
-      "bubbleWidth": 236,
-      "bubbleHeight": 172,
+      "bubbleWidth": null,
+      "bubbleHeight": null,
+      "bubbleWidthUserSized": false,
+      "bubbleHeightUserSized": false,
       "bubbleOffsetX": 52,
       "bubbleOffsetY": -122,
       "bubbleLat": null,
