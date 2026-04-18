@@ -32,7 +32,7 @@
 </div>
 
 <!-- Control Panel -->
-<aside class="control-panel" aria-label="Route control panel">
+<aside class="control-panel" aria-label="Open Atlas sidebar">
   <div class="panel-header">
     <svg class="compass" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.5">
       <circle cx="50" cy="50" r="44"></circle>
@@ -49,61 +49,8 @@
     </div>
   </div>
 
-  <button class="btn" id="drawRouteBtn" disabled="">
-    <i class="fa-solid fa-route"></i>
-    <span id="drawRouteLabel">Draw Route</span>
-  </button>
-  <button class="btn btn-danger" id="clearMapBtn">
-    <i class="fa-solid fa-eraser"></i>
-    Clear Map
-  </button>
-
-  <div class="panel-section">
-    <div class="panel-section-label">Navigator Tools</div>
-    <button class="btn" id="findPortBtn">
-      <i class="fa-solid fa-magnifying-glass-location"></i>
-      Find Port
-    </button>
-    <button class="btn" id="measureBtn">
-      <i class="fa-solid fa-ruler"></i>
-      <span id="measureLabel">Measure Distance</span>
-    </button>
-  </div>
-
-  <div class="panel-section">
-    <div class="panel-section-label">Logbook</div>
-    <button class="btn" id="exportPngBtn">
-      <i class="fa-solid fa-image"></i>
-      Export PNG
-    </button>
-    <button class="btn" id="exportJsonBtn">
-      <i class="fa-solid fa-file-export"></i>
-      Export JSON
-    </button>
-    <button class="btn" id="exportGeoJsonBtn">
-      <i class="fa-solid fa-layer-group"></i>
-      Export GeoJSON
-    </button>
-    <button class="btn" id="importJsonBtn">
-      <i class="fa-solid fa-file-import"></i>
-      Import JSON
-    </button>
-    <input type="file" id="jsonFileInput" accept=".json,application/json">
-  </div>
-
-  <div class="panel-section">
-    <div class="panel-section-label">History</div>
-    <div class="dual-action-grid">
-      <button class="btn" id="undoBtn" disabled="">
-        <i class="fa-solid fa-rotate-left"></i>
-        Undo
-      </button>
-      <button class="btn" id="redoBtn" disabled="">
-        <i class="fa-solid fa-rotate-right"></i>
-        Redo
-      </button>
-    </div>
-    <div class="draft-note" id="historyNote">Use Cmd/Ctrl+Z to rewind changes.</div>
+  <div class="panel-intro">
+    Click anywhere on the map to add ports, then use the tools here to chart, annotate, save, and share your atlas.
   </div>
 
   <div class="stats">
@@ -117,11 +64,91 @@
     </div>
   </div>
 
-  <div class="chart-state" id="chartState">Preparing charts…</div>
+  <div class="status-stack">
+    <div class="chart-state" id="chartState">Preparing sea charts…</div>
+    <div class="draft-note" id="historyNote">Undo with Cmd/Ctrl+Z. Redo with Shift+Cmd/Ctrl+Z.</div>
+    <div class="draft-note" id="draftNote">Drafts autosave in this browser while you work.</div>
+  </div>
+
+  <div class="panel-section">
+    <div class="panel-section-label">Create</div>
+    <div class="panel-section-note">Build your atlas directly on the map, then refine or clear it from here.</div>
+    <button class="btn btn-primary" id="drawRouteBtn" disabled="">
+      <i class="fa-solid fa-route"></i>
+      <span id="drawRouteLabel">Chart route</span>
+    </button>
+    <button class="btn btn-danger" id="clearMapBtn">
+      <i class="fa-solid fa-eraser"></i>
+      Clear atlas
+    </button>
+  </div>
+
+  <div class="panel-section">
+    <div class="panel-section-label">Explore</div>
+    <div class="panel-section-note">Jump to saved ports or measure straight-line distances across the current view.</div>
+    <button class="btn" id="findPortBtn">
+      <i class="fa-solid fa-magnifying-glass-location"></i>
+      Find port
+    </button>
+    <button class="btn" id="measureBtn">
+      <i class="fa-solid fa-ruler"></i>
+      <span id="measureLabel">Measure distance</span>
+    </button>
+  </div>
+
+  <div class="panel-section">
+    <div class="panel-section-label">Save &amp; Share</div>
+    <div class="panel-section-note">Export polished visuals or portable data files, then reload an atlas later for editing.</div>
+    <div class="action-grid">
+      <button class="btn" id="exportPngBtn">
+        <i class="fa-solid fa-image"></i>
+        Export PNG
+      </button>
+      <button class="btn" id="exportJsonBtn">
+        <i class="fa-solid fa-file-export"></i>
+        Export JSON
+      </button>
+      <button class="btn" id="exportGeoJsonBtn">
+        <i class="fa-solid fa-layer-group"></i>
+        Export GeoJSON
+      </button>
+      <button class="btn" id="importJsonBtn">
+        <i class="fa-solid fa-file-import"></i>
+        Import atlas
+      </button>
+    </div>
+    <input type="file" id="jsonFileInput" accept=".json,application/json">
+  </div>
+
+  <div class="panel-section">
+    <div class="panel-section-label">Workspace</div>
+    <div class="panel-section-note">Adjust the look, open guidance, or move backward and forward through recent edits.</div>
+    <div class="dual-action-grid">
+      <button class="btn" id="undoBtn" disabled="">
+        <i class="fa-solid fa-rotate-left"></i>
+        Undo
+      </button>
+      <button class="btn" id="redoBtn" disabled="">
+        <i class="fa-solid fa-rotate-right"></i>
+        Redo
+      </button>
+    </div>
+    <div class="dual-action-grid section-spacer">
+      <button class="btn" id="settingsBtn">
+        <i class="fa-solid fa-sliders"></i>
+        Appearance
+      </button>
+      <button class="btn" id="helpBtn">
+        <i class="fa-solid fa-circle-question"></i>
+        Guide
+      </button>
+    </div>
+  </div>
 
   <div class="panel-section panel-section-tight">
     <div class="panel-section-label">Drafts</div>
-    <div class="draft-actions">
+    <div class="panel-section-note">Keep a browser-local working draft close by without exporting a file every time.</div>
+    <div class="dual-action-grid">
       <button class="btn" id="restoreDraftBtn" disabled="">
         <i class="fa-solid fa-rotate-left"></i>
         Restore Draft
@@ -131,18 +158,6 @@
         Discard Draft
       </button>
     </div>
-    <div class="draft-note" id="draftNote">Drafts autosave in your browser while you work.</div>
-  </div>
-
-  <div class="panel-section panel-section-tight">
-    <button class="btn" id="settingsBtn">
-      <i class="fa-solid fa-sliders"></i>
-      Studio Settings
-    </button>
-    <button class="btn" id="helpBtn" style="margin-top:8px; margin-bottom:0;">
-      <i class="fa-solid fa-circle-question"></i>
-      Help &amp; FAQ
-    </button>
   </div>
 </aside>
 
@@ -384,8 +399,8 @@
       <div class="help-section">
         <div class="help-title"><i class="fa-solid fa-route"></i> Drawing Sea Routes</div>
         <div class="help-text">
-          • Wait for "Sea charts loaded" to appear in the control panel<br>
-          • Click the <strong>Draw Route</strong> button<br>
+          • Wait for "Sea charts ready" to appear in the sidebar<br>
+          • Click <strong>Chart route</strong> in the Create section<br>
           • Click two ports to chart a maritime route between them<br>
           • The app uses A* pathfinding to plot realistic sea routes that avoid land masses and navigate through straits (Panama, Suez, Gibraltar, etc.)<br>
           • If two significantly different routes exist, you'll be prompted to choose your preferred course<br>
@@ -408,9 +423,9 @@
       <div class="help-section">
         <div class="help-title"><i class="fa-solid fa-compass-drafting"></i> Navigator Tools</div>
         <div class="help-text">
-          • Click <strong>Find Port</strong> to search by port name or saved notes<br>
+          • Use <strong>Find port</strong> in the Explore section to search by port name or saved notes<br>
           • Selecting a match jumps the map to that port and briefly highlights it<br>
-          • Click <strong>Measure Distance</strong> to start the straight-line ruler<br>
+          • Click <strong>Measure distance</strong> to start the straight-line ruler<br>
           • Click any two points on the map to measure great-circle distance in km and nautical miles<br>
           • Measurements are visual aids only and are not included in JSON exports
         </div>
@@ -419,7 +434,7 @@
       <div class="help-section">
         <div class="help-title"><i class="fa-solid fa-image"></i> Exporting as PNG</div>
         <div class="help-text">
-          • Click <strong>Export PNG</strong> in the Logbook section<br>
+          • Click <strong>Export PNG</strong> in the Save &amp; Share section<br>
           • Choose between <strong>Map Only</strong> and <strong>Studio View</strong> before rendering<br>
           • Capture either the current viewport or automatically fit all ports and routes into frame<br>
           • Pick standard, high, or ultra output quality depending on how heavy you want the file to be<br>
@@ -451,7 +466,7 @@
       <div class="help-section">
         <div class="help-title"><i class="fa-solid fa-file-import"></i> Importing from JSON</div>
         <div class="help-text">
-          • Click <strong>Import JSON</strong> and select a previously exported atlas file<br>
+          • Click <strong>Import atlas</strong> and select a previously exported atlas file<br>
           • The current map will be cleared and replaced with the imported data<br>
           • All ports, routes, notes, and bubble positions are restored exactly as saved<br>
           • The camera view (zoom and center) is also restored<br>
@@ -462,7 +477,7 @@
       <div class="help-section">
         <div class="help-title"><i class="fa-solid fa-sliders"></i> Studio Settings</div>
         <div class="help-text">
-          • Open <strong>Studio Settings</strong> to tune fonts, colors, theme mode, and the basemap style<br>
+          • Open <strong>Appearance</strong> in the Workspace section to tune fonts, colors, theme mode, and the basemap style<br>
           • Atlas title and subtitle are part of your saved JSON and GeoJSON metadata<br>
           • Theme choices are also stored in your browser so the workspace reopens with your preferred look
         </div>
@@ -471,7 +486,7 @@
       <div class="help-section">
         <div class="help-title"><i class="fa-solid fa-clock-rotate-left"></i> Undo &amp; Redo</div>
         <div class="help-text">
-          • Use <strong>Undo</strong> and <strong>Redo</strong> in the History section to step through atlas edits<br>
+          • Use <strong>Undo</strong> and <strong>Redo</strong> in the Workspace section to step through atlas edits<br>
           • Keyboard shortcuts: <strong>Cmd/Ctrl+Z</strong> to undo, <strong>Shift+Cmd/Ctrl+Z</strong> or <strong>Ctrl+Y</strong> to redo<br>
           • Imports, port edits, route changes, and visual settings all participate in history
         </div>

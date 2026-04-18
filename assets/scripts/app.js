@@ -344,7 +344,7 @@
     discardDraftBtn.disabled = !hasDraft;
     draftNote.textContent = hasDraft
       ? `Draft saved ${formatDraftTimestamp(storedDraft.draftSavedAt || storedDraft.exported)}.`
-      : 'Drafts autosave in your browser while you work.';
+      : 'Drafts autosave in this browser while you work.';
   }
 
   function clearStoredDraft(opts) {
@@ -428,7 +428,7 @@
     } else if (historyStack.length > 1) {
       historyNote.textContent = 'You are at the oldest saved atlas step.';
     } else {
-      historyNote.textContent = 'Use Cmd/Ctrl+Z to rewind changes.';
+      historyNote.textContent = 'Undo with Cmd/Ctrl+Z. Redo with Shift+Cmd/Ctrl+Z.';
     }
   }
 
@@ -1440,7 +1440,7 @@
     if (on) setMeasureMode(false);
     drawMode = on;
     drawBtn.classList.toggle('active', on);
-    drawLabel.textContent = on ? 'Cancel Route' : 'Draw Route';
+    drawLabel.textContent = on ? 'Cancel route' : 'Chart route';
     if (!on) {
       selectedForRoute = [];
       hideHint();
@@ -1449,7 +1449,7 @@
         showHint('Place at least two ports first.');
         drawMode = false;
         drawBtn.classList.remove('active');
-        drawLabel.textContent = 'Draw Route';
+        drawLabel.textContent = 'Chart route';
         return;
       }
       showHint('Click two ports to chart a sea route.', true);
@@ -1490,7 +1490,7 @@
     if (on) setDrawMode(false);
     measureMode = on;
     measureBtn.classList.toggle('btn-tool-active', on);
-    measureLabel.textContent = on ? 'Cancel Measure' : 'Measure Distance';
+    measureLabel.textContent = on ? 'Cancel measure' : 'Measure distance';
     if (!on) {
       clearMeasurePreview();
       if (!preserveHint) hideHint();
@@ -1671,7 +1671,7 @@
   }
 
   function openExportModal() {
-    setExportBusy(false, 'Export PNG', 'Choose the framing and output quality.');
+    setExportBusy(false, 'Export PNG', 'Choose the framing, layout, and output quality.');
     updateExportTip();
     exportModal.classList.add('show');
   }
@@ -1950,7 +1950,7 @@
     } catch (err) {
       console.error('PNG export error', err);
       showHint('PNG export failed — check console.');
-      setExportBusy(false, 'Export PNG', 'Choose the framing and output quality.');
+      setExportBusy(false, 'Export PNG', 'Choose the framing, layout, and output quality.');
     } finally {
       document.body.classList.remove('exporting', 'export-studio', 'export-map-only');
     }
@@ -2069,18 +2069,18 @@
   buildSeaGrid()
     .then(() => {
       seaReady = true;
-      chartState.textContent = 'Sea charts loaded';
+      chartState.textContent = 'Sea charts ready';
       chartState.classList.add('ready');
       syncActionState();
       setTimeout(() => {
         loader.classList.add('hidden');
         setTimeout(() => loader.remove(), 500);
       }, 250);
-      setTimeout(() => showHint('Click the map to anchor a port.'), 800);
+      setTimeout(() => showHint('Click anywhere on the map to add a port.'), 800);
     })
     .catch(err => {
       console.error('Failed to load sea charts', err);
-      chartState.textContent = 'Charts failed to load';
+      chartState.textContent = 'Sea charts failed to load';
       loaderText.textContent = 'Failed to load sea charts. Check connection.';
       syncActionState();
     });
