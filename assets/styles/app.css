@@ -64,6 +64,46 @@
     background: var(--bg);
   }
 
+  .panel-toggle {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 1105;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.84);
+    color: var(--ink);
+    box-shadow: 0 18px 40px rgba(24, 53, 80, 0.16);
+    backdrop-filter: blur(18px);
+    font-family: var(--font-ui);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    cursor: pointer;
+    transition: transform 0.25s ease, background 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+  }
+
+  .panel-toggle:hover {
+    transform: translateY(-1px);
+    background: var(--accent);
+    color: #f7fbff;
+    border-color: var(--accent);
+  }
+
+  html.dark .panel-toggle {
+    background: rgba(16, 30, 43, 0.88);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.34);
+  }
+
+  html.dark .panel-toggle:hover {
+    color: #09141f;
+  }
+
   html.dark #map {
     filter: brightness(0.85) contrast(1.05) hue-rotate(-10deg);
   }
@@ -81,7 +121,32 @@
     padding: 18px;
     min-width: 312px;
     max-width: min(360px, calc(100vw - 40px));
+    max-height: calc(100vh - 40px);
     backdrop-filter: blur(18px);
+    overflow-y: auto;
+    transition: transform 0.3s ease, opacity 0.25s ease;
+  }
+
+  .control-panel::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .control-panel::-webkit-scrollbar-thumb {
+    background: rgba(22, 33, 45, 0.14);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  html.dark .control-panel::-webkit-scrollbar-thumb {
+    background: rgba(237, 243, 248, 0.18);
+    background-clip: padding-box;
+  }
+
+  body.panel-hidden .control-panel {
+    transform: translateX(calc(100% + 36px));
+    opacity: 0;
+    pointer-events: none;
   }
 
   .panel-intro {
@@ -127,6 +192,47 @@
     color: var(--ink-soft);
     text-transform: uppercase;
     margin-top: 5px;
+  }
+
+  .workflow-strip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .workflow-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.62);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    cursor: pointer;
+    transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  }
+
+  .workflow-pill:hover {
+    transform: translateY(-1px);
+    border-color: var(--accent);
+  }
+
+  .workflow-pill.is-active {
+    background: rgba(24, 86, 122, 0.12);
+    border-color: rgba(24, 86, 122, 0.28);
+    color: var(--accent);
+  }
+
+  html.dark .workflow-pill {
+    background: rgba(16, 30, 43, 0.82);
   }
 
   .btn {
@@ -389,7 +495,7 @@
     border: 1px solid var(--border) !important;
     border-radius: 2px !important;
     padding: 3px 8px !important;
-    font-family: 'JetBrains Mono', monospace !important;
+    font-family: var(--font-ui) !important;
     font-size: 10px !important;
     font-weight: 600 !important;
     letter-spacing: 1px !important;
@@ -407,7 +513,7 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 12px 16px 12px 16px;
-    font-family: 'Cormorant Garamond', serif;
+    font-family: var(--font-body);
     font-size: 15px;
     line-height: 1.4;
     max-width: 260px;
@@ -449,7 +555,7 @@
     position: absolute;
     top: 6px;
     right: 8px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-ui);
     font-size: 8px;
     letter-spacing: 1px;
     color: var(--ink-soft);
@@ -458,7 +564,7 @@
     pointer-events: none;
   }
   .info-bubble .bubble-title {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-ui);
     font-size: 10px;
     letter-spacing: 1.5px;
     text-transform: uppercase;
@@ -473,7 +579,8 @@
     padding: 14px;
     border: 1px solid var(--border);
     border-radius: 18px;
-    background: var(--panel-muted);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.22));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
   }
 
   .panel-section-tight {
@@ -535,7 +642,7 @@
     width: 100%;
     min-height: 90px;
     padding: 10px 12px;
-    font-family: 'Cormorant Garamond', serif;
+    font-family: var(--font-body);
     font-size: 16px;
     color: var(--ink);
     background: transparent;
@@ -566,7 +673,7 @@
     cursor: pointer;
   }
   .modal .check-row label {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-ui);
     font-size: 10px;
     letter-spacing: 1.5px;
     text-transform: uppercase;
@@ -575,7 +682,7 @@
   }
 
   .modal .field-label {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-ui);
     font-size: 9px;
     letter-spacing: 1.5px;
     text-transform: uppercase;
@@ -588,6 +695,7 @@
   body.exporting .hint,
   body.exporting .charting,
   body.exporting .modal-backdrop,
+  body.exporting .panel-toggle,
   body.exporting .leaflet-control-container {
     display: none !important;
   }
@@ -607,7 +715,7 @@
   }
   .help-section:last-child { border-bottom: none; }
   .help-title {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-ui);
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 1.5px;
@@ -620,13 +728,13 @@
   }
   .help-title i { font-size: 13px; }
   .help-text {
-    font-family: 'Cormorant Garamond', serif;
+    font-family: var(--font-body);
     font-size: 15px;
     line-height: 1.6;
     color: var(--ink);
   }
   .help-text code {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-ui);
     font-size: 12px;
     background: rgba(0,0,0,0.08);
     padding: 2px 6px;
@@ -691,7 +799,7 @@
   .modal input {
     width: 100%;
     padding: 12px 14px;
-    font-family: 'Cormorant Garamond', serif;
+    font-family: var(--font-body);
     font-size: 18px;
     color: var(--ink);
     background: transparent;
@@ -769,7 +877,7 @@
     text-transform: uppercase;
   }
   .route-card .route-dist {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-ui);
     font-size: 10px;
     letter-spacing: 1px;
     color: var(--ink-soft);
@@ -836,6 +944,63 @@
     border-top: 1px dashed var(--border);
   }
 
+  .settings-preview {
+    margin-top: 18px;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background:
+      radial-gradient(circle at top left, rgba(24, 86, 122, 0.18), transparent 42%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.54), rgba(255, 255, 255, 0.2));
+  }
+
+  .settings-preview-kicker {
+    font-family: var(--font-ui);
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .settings-preview-title {
+    margin-top: 10px;
+    font-family: var(--font-display);
+    font-size: 32px;
+    line-height: 0.98;
+    letter-spacing: -0.04em;
+    color: var(--ink);
+  }
+
+  .settings-preview-subtitle {
+    margin-top: 8px;
+    font-family: var(--font-ui);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .settings-preview-palette {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .settings-preview-swatch {
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    border: 1px solid rgba(22, 33, 45, 0.12);
+  }
+
+  .settings-preview-note {
+    margin-top: 16px;
+    max-width: 32rem;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+
   .settings-preset-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -882,7 +1047,7 @@
     border: 1px dashed var(--border);
     padding: 14px 16px;
     text-align: center;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-ui);
     font-size: 10px;
     letter-spacing: 1.5px;
     text-transform: uppercase;
@@ -906,7 +1071,7 @@
   }
 
   .search-result-name {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-ui);
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 1.3px;
@@ -916,7 +1081,7 @@
 
   .search-result-meta {
     margin-top: 4px;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-ui);
     font-size: 9px;
     letter-spacing: 1px;
     color: var(--ink-soft);
@@ -949,7 +1114,7 @@
     box-shadow: var(--shadow);
   }
   .leaflet-popup-content {
-    font-family: 'Cormorant Garamond', serif;
+    font-family: var(--font-body);
     font-size: 16px;
     margin: 10px 14px;
   }
@@ -964,14 +1129,14 @@
     letter-spacing: 0.5px;
   }
   .port-popup .coord {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: var(--font-ui);
     font-size: 10px;
     color: var(--ink-soft);
     letter-spacing: 1px;
     margin-top: 3px;
   }
 
-  .leaflet-container { font-family: 'JetBrains Mono', monospace; }
+  .leaflet-container { font-family: var(--font-ui); }
   .leaflet-control-attribution {
     background: var(--panel) !important;
     color: var(--ink-soft) !important;
@@ -1020,12 +1185,18 @@
   }
 
   @media (max-width: 500px) {
+    .panel-toggle {
+      top: 12px;
+      left: 12px;
+      padding: 11px 12px;
+    }
     .control-panel {
-      top: 10px;
+      top: 64px;
       right: 10px;
       left: 10px;
       min-width: 0;
       padding: 12px;
+      max-height: calc(100vh - 76px);
     }
     .panel-title { font-size: 17px; }
     .stat-val { font-size: 18px; }
@@ -1033,7 +1204,8 @@
     .settings-grid,
     .settings-preset-grid,
     .dual-action-grid,
-    .action-grid { grid-template-columns: 1fr; }
+    .action-grid,
+    .workflow-strip { grid-template-columns: 1fr; }
   }
 
   body,

@@ -16,6 +16,11 @@
 
 <div id="map"></div>
 
+<button class="panel-toggle" id="panelToggleBtn" type="button" aria-controls="appPanel" aria-expanded="true">
+  <i class="fa-solid fa-panorama"></i>
+  <span id="panelToggleText">Focus map</span>
+</button>
+
 <!-- Loader -->
 <div class="loader" id="loader">
   <svg class="compass-big" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -32,7 +37,7 @@
 </div>
 
 <!-- Control Panel -->
-<aside class="control-panel" aria-label="Open Atlas sidebar">
+<aside class="control-panel" id="appPanel" aria-label="Open Atlas sidebar">
   <div class="panel-header">
     <svg class="compass" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.5">
       <circle cx="50" cy="50" r="44"></circle>
@@ -51,6 +56,12 @@
 
   <div class="panel-intro">
     Click anywhere on the map to add ports, then use the tools here to chart, annotate, save, and share your atlas.
+  </div>
+
+  <div class="workflow-strip" aria-label="Open Atlas workflow">
+    <button class="workflow-pill" id="workflowPortsBtn" type="button">1 Add ports</button>
+    <button class="workflow-pill" id="workflowRoutesBtn" type="button">2 Chart paths</button>
+    <button class="workflow-pill" id="workflowExportBtn" type="button">3 Export</button>
   </div>
 
   <div class="stats">
@@ -296,6 +307,21 @@
     <h3>Studio Settings</h3>
     <div class="modal-sub">Customize the atlas look, fonts, and export personality</div>
 
+    <div class="settings-preview" id="settingsPreview">
+      <div class="settings-preview-kicker">Live preview</div>
+      <div class="settings-preview-title" id="settingsPreviewTitle">Open Atlas</div>
+      <div class="settings-preview-subtitle" id="settingsPreviewSubtitle">Map Studio</div>
+      <div class="settings-preview-palette">
+        <span class="settings-preview-swatch" id="previewAccentSwatch"></span>
+        <span class="settings-preview-swatch" id="previewMarkerSwatch"></span>
+        <span class="settings-preview-swatch" id="previewRouteSwatch"></span>
+        <span class="settings-preview-swatch" id="previewAltRouteSwatch"></span>
+      </div>
+      <div class="settings-preview-note" id="settingsPreviewNote">
+        Your exports inherit these type, palette, and tone choices.
+      </div>
+    </div>
+
     <div class="settings-grid full">
       <div class="settings-field">
         <label for="settingsTitleInput">Atlas Title</label>
@@ -438,7 +464,7 @@
           • Choose between <strong>Map Only</strong> and <strong>Studio View</strong> before rendering<br>
           • Capture either the current viewport or automatically fit all ports and routes into frame<br>
           • Pick standard, high, or ultra output quality depending on how heavy you want the file to be<br>
-          • The PNG is saved with a timestamp: <code>mariners-atlas-YYYY-MM-DD...</code><br>
+          • The PNG is saved with a timestamp: <code>open-atlas-YYYY-MM-DD...</code><br>
           • High-resolution output suitable for printing or sharing
         </div>
       </div>
@@ -449,7 +475,7 @@
           • Click <strong>Export JSON</strong> to save your entire atlas<br>
           • The JSON file includes all ports (names, coordinates, notes, bubble positions), all routes (exact paths, distances), and the current map view<br>
           • Save this file to back up your work or share it with others<br>
-          • Filename format: <code>mariners-atlas-YYYY-MM-DD...</code>
+          • Filename format: <code>open-atlas-YYYY-MM-DD...</code>
         </div>
       </div>
 
@@ -478,6 +504,7 @@
         <div class="help-title"><i class="fa-solid fa-sliders"></i> Studio Settings</div>
         <div class="help-text">
           • Open <strong>Appearance</strong> in the Workspace section to tune fonts, colors, theme mode, and the basemap style<br>
+          • The live preview card shows how your title, palette, and typography will read before you export<br>
           • Atlas title and subtitle are part of your saved JSON and GeoJSON metadata<br>
           • Theme choices are also stored in your browser so the workspace reopens with your preferred look
         </div>
@@ -495,6 +522,8 @@
       <div class="help-section">
         <div class="help-title"><i class="fa-solid fa-lightbulb"></i> Tips</div>
         <div class="help-text">
+          • Use the top-left <strong>Focus map</strong> button whenever you want the canvas full-screen, then reopen the studio when you need the controls<br>
+          • The three workflow chips near the top of the sidebar guide you through adding ports, charting routes, and exporting assets<br>
           • Routes use real maritime pathfinding — expect ships to navigate around continents and through major canals<br>
           • Press <strong>Esc</strong> to close any open modal<br>
           • Press <strong>Esc</strong> while drawing or measuring to cancel the active tool<br>

@@ -67,6 +67,13 @@ The project is intentionally:
 - Display, body, and UI fonts
 - Accent, marker, and route colors
 - Curated visual presets
+- Live settings preview card in the appearance modal
+
+### Workspace shell
+
+- Floating `Focus map` toggle to hide or restore the sidebar
+- Three-step workflow strip for `Add ports`, `Chart paths`, and `Export`
+- Scrollable sidebar with grouped sections for create, explore, save/share, workspace, and drafts
 
 ### Export
 
@@ -122,6 +129,7 @@ Notes:
 - JSON is the source-of-truth editable format
 - GeoJSON is an export convenience format, not the primary editable schema
 - draft autosaves reuse the same atlas shape plus a `draftSavedAt` timestamp
+- exported filenames currently use the `open-atlas-...` prefix, while the JSON `format` field remains `mariners-atlas` for backward compatibility
 
 ## Main code areas in `assets/scripts/app.js`
 

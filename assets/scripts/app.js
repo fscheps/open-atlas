@@ -46,6 +46,8 @@
   let seaReady = false;
 
   /* ===== DOM ===== */
+  const panelToggleBtn = document.getElementById('panelToggleBtn');
+  const panelToggleText = document.getElementById('panelToggleText');
   const drawBtn = document.getElementById('drawRouteBtn');
   const drawLabel = document.getElementById('drawRouteLabel');
   const clearBtn = document.getElementById('clearMapBtn');
@@ -70,6 +72,9 @@
   const restoreDraftBtn = document.getElementById('restoreDraftBtn');
   const discardDraftBtn = document.getElementById('discardDraftBtn');
   const draftNote = document.getElementById('draftNote');
+  const workflowPortsBtn = document.getElementById('workflowPortsBtn');
+  const workflowRoutesBtn = document.getElementById('workflowRoutesBtn');
+  const workflowExportBtn = document.getElementById('workflowExportBtn');
 
   const nameModal = document.getElementById('nameModal');
   const portNameInput = document.getElementById('portNameInput');
@@ -107,6 +112,13 @@
   const settingsCloseBtn = document.getElementById('settingsCloseBtn');
   const settingsResetBtn = document.getElementById('settingsResetBtn');
   const presetGrid = document.getElementById('presetGrid');
+  const settingsPreviewTitle = document.getElementById('settingsPreviewTitle');
+  const settingsPreviewSubtitle = document.getElementById('settingsPreviewSubtitle');
+  const settingsPreviewNote = document.getElementById('settingsPreviewNote');
+  const previewAccentSwatch = document.getElementById('previewAccentSwatch');
+  const previewMarkerSwatch = document.getElementById('previewMarkerSwatch');
+  const previewRouteSwatch = document.getElementById('previewRouteSwatch');
+  const previewAltRouteSwatch = document.getElementById('previewAltRouteSwatch');
 
   let pendingLatLng = null;
   let isPlottingRoute = false;
@@ -118,6 +130,7 @@
   let routeChoiceState = null;
   const SETTINGS_STORAGE_KEY = 'mariners-atlas-settings-v1';
   const DRAFT_STORAGE_KEY = 'mariners-atlas-draft-v1';
+  const UI_STORAGE_KEY = 'open-atlas-ui-v1';
   const DEFAULT_VIEW = {
     center: [25, -30],
     zoom: 3
@@ -213,6 +226,7 @@
   let draftSaveTimer = null;
   let autosaveSuspended = 0;
   let storedDraft = null;
+  let panelHidden = false;
   let historySaveTimer = null;
   let historySuspended = 0;
   let historyStack = [];
@@ -221,6 +235,7 @@
   function updateStats() {
     portCountEl.textContent = markers.length;
     routeCountEl.textContent = routes.length;
+    refreshWorkflowState();
   }
 
   let hintTimer = null;
@@ -274,6 +289,25 @@
     } catch (err) {
       console.warn('Failed to parse stored settings', err);
       return null;
+    }
+  }
+
+  function loadUiPrefs() {
+    try {
+      const raw = localStorage.getItem(UI_STORAGE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (err) {
+      console.warn('Failed to parse UI preferences', err);
+      return null;
+    }
+  }
+
+  function saveUiPrefs() {
+    try {
+      localStorage.setItem(UI_STORAGE_KEY, JSON.stringify({ panelHidden }));
+    } catch (err) {
+      console.warn('Failed to persist UI preferences', err);
     }
   }
 
@@ -345,6 +379,20 @@
     draftNote.textContent = hasDraft
       ? `Draft saved ${formatDraftTimestamp(storedDraft.draftSavedAt || storedDraft.exported)}.`
       : 'Drafts autosave in this browser while you work.';
+  }
+
+  function refreshPanelToggleUi() {
+    panelToggleText.textContent = panelHidden ? 'Open studio' : 'Focus map';
+    panelToggleBtn.setAttribute('aria-expanded', String(!panelHidden));
+    panelToggleBtn.setAttribute('aria-label', panelHidden ? 'Open the atlas studio sidebar' : 'Hide the atlas studio sidebar');
+  }
+
+  function setPanelHidden(nextHidden, opts) {
+    const options = opts || {};
+    panelHidden = !!nextHidden;
+    document.body.classList.toggle('panel-hidden', panelHidden);
+    refreshPanelToggleUi();
+    if (options.persist !== false) saveUiPrefs();
   }
 
   function clearStoredDraft(opts) {
@@ -430,6 +478,22 @@
     } else {
       historyNote.textContent = 'Undo with Cmd/Ctrl+Z. Redo with Shift+Cmd/Ctrl+Z.';
     }
+  }
+
+  function refreshWorkflowState() {
+    const exportOpen = typeof exportModal !== 'undefined' && exportModal.classList.contains('show');
+    const activeStep = exportOpen || routes.length
+      ? 'export'
+      : (drawMode || markers.length >= 2 ? 'routes' : 'ports');
+
+    [
+      [workflowPortsBtn, activeStep === 'ports'],
+      [workflowRoutesBtn, activeStep === 'routes'],
+      [workflowExportBtn, activeStep === 'export']
+    ].forEach(([button, active]) => {
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
   }
 
   function saveHistoryNow() {
@@ -521,6 +585,20 @@
     markerColorInput.value = settings.markerColor;
     routeColorInput.value = settings.routeColor;
     routeAltColorInput.value = settings.routeAltColor;
+    refreshSettingsPreview();
+  }
+
+  function refreshSettingsPreview() {
+    settingsPreviewTitle.textContent = settings.atlasTitle || DEFAULT_SETTINGS.atlasTitle;
+    settingsPreviewSubtitle.textContent = settings.atlasSubtitle || DEFAULT_SETTINGS.atlasSubtitle;
+    settingsPreviewTitle.style.fontFamily = FONT_STACKS[settings.displayFont] || FONT_STACKS.fraunces;
+    settingsPreviewSubtitle.style.fontFamily = FONT_STACKS[settings.uiFont] || FONT_STACKS.ibmplexmono;
+    settingsPreviewNote.style.fontFamily = FONT_STACKS[settings.bodyFont] || FONT_STACKS.manrope;
+    settingsPreviewTitle.style.color = settings.accentColor;
+    previewAccentSwatch.style.background = settings.accentColor;
+    previewMarkerSwatch.style.background = settings.markerColor;
+    previewRouteSwatch.style.background = settings.routeColor;
+    previewAltRouteSwatch.style.background = settings.routeAltColor;
   }
 
   function applySettings(nextSettings, opts) {
@@ -810,6 +888,25 @@
   helpCloseBtn.addEventListener('click', () => helpModal.classList.remove('show'));
   helpModal.addEventListener('click', (e) => {
     if (e.target === helpModal) helpModal.classList.remove('show');
+  });
+  panelToggleBtn.addEventListener('click', () => setPanelHidden(!panelHidden));
+  workflowPortsBtn.addEventListener('click', () => {
+    setPanelHidden(false);
+    setDrawMode(false);
+    setMeasureMode(false);
+    showHint('Click anywhere on the map to add a port.', true);
+  });
+  workflowRoutesBtn.addEventListener('click', () => {
+    setPanelHidden(false);
+    if (markers.length < 2) {
+      showHint('Add at least two ports before charting a route.');
+      return;
+    }
+    setDrawMode(true);
+  });
+  workflowExportBtn.addEventListener('click', () => {
+    setPanelHidden(false);
+    openExportModal();
   });
   settingsBtn.addEventListener('click', openSettingsModal);
   settingsCloseBtn.addEventListener('click', closeSettingsModal);
@@ -1388,6 +1485,7 @@
     routeChoiceModal.classList.remove('show');
     routeChoices.innerHTML = '';
     syncActionState();
+    refreshWorkflowState();
     if (!silent) showHint('Route selection cancelled.');
   }
 
@@ -1402,6 +1500,7 @@
     bindRoutePopup(group, portA.name, portB.name, km, variant);
     routes.push({ layer: group, fromId: portA.id, toId: portB.id, fromName: portA.name, toName: portB.name, variant, km, latlngs });
     updateStats();
+    refreshWorkflowState();
     showHint(`Route charted: ${portA.name} → ${portB.name} (${nm.toLocaleString()} nmi)`);
     scheduleDraftSave();
     scheduleHistorySnapshot();
@@ -1450,11 +1549,13 @@
         drawMode = false;
         drawBtn.classList.remove('active');
         drawLabel.textContent = 'Chart route';
+        refreshWorkflowState();
         return;
       }
       showHint('Click two ports to chart a sea route.', true);
     }
     refreshMarkerVisuals();
+    refreshWorkflowState();
   }
 
   /* ===== Distance ruler ===== */
@@ -1497,6 +1598,7 @@
     } else {
       showHint('Click two points to measure a straight-line distance.', true);
     }
+    refreshWorkflowState();
   }
 
   function commitMeasurement(a, b) {
@@ -1674,10 +1776,12 @@
     setExportBusy(false, 'Export PNG', 'Choose the framing, layout, and output quality.');
     updateExportTip();
     exportModal.classList.add('show');
+    refreshWorkflowState();
   }
 
   function closeExportModal() {
     exportModal.classList.remove('show');
+    refreshWorkflowState();
   }
 
   function triggerDownload(blob, filename) {
@@ -1960,7 +2064,7 @@
     const state = buildAtlasState();
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
     const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    triggerDownload(blob, `mariners-atlas-${ts}.json`);
+    triggerDownload(blob, `open-atlas-${ts}.json`);
     showHint('Atlas exported as JSON.');
   }
 
@@ -1968,7 +2072,7 @@
     const state = buildGeoJsonExport();
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/geo+json' });
     const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    triggerDownload(blob, `mariners-atlas-${ts}.geojson`);
+    triggerDownload(blob, `open-atlas-${ts}.geojson`);
     showHint('Atlas exported as GeoJSON.');
   }
 
@@ -2059,8 +2163,16 @@
   storedDraft = loadStoredDraft();
   refreshDraftUi();
   applySettings(loadStoredSettings() || DEFAULT_SETTINGS, { persist: false, recordDraft: false, recordHistory: false });
+  const storedUiPrefs = loadUiPrefs();
+  setPanelHidden(
+    storedUiPrefs && typeof storedUiPrefs.panelHidden === 'boolean'
+      ? storedUiPrefs.panelHidden
+      : window.innerWidth <= 720,
+    { persist: false }
+  );
   updateExportTip();
   saveHistoryNow();
+  refreshWorkflowState();
   systemThemeMedia.addEventListener('change', () => {
     if (settings.themeMode === 'auto') refreshThemeMode();
   });
@@ -2072,6 +2184,7 @@
       chartState.textContent = 'Sea charts ready';
       chartState.classList.add('ready');
       syncActionState();
+      refreshWorkflowState();
       setTimeout(() => {
         loader.classList.add('hidden');
         setTimeout(() => loader.remove(), 500);
@@ -2083,6 +2196,7 @@
       chartState.textContent = 'Sea charts failed to load';
       loaderText.textContent = 'Failed to load sea charts. Check connection.';
       syncActionState();
+      refreshWorkflowState();
     });
 
   updateStats();
