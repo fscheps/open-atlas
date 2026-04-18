@@ -399,6 +399,21 @@
           <label for="uiFontSelect">UI Font</label>
           <select id="uiFontSelect"></select>
         </div>
+        <div class="settings-field">
+          <label for="calloutStyleSelect">Callout Style</label>
+          <select id="calloutStyleSelect">
+            <option value="subtle">Subtle</option>
+            <option value="editorial">Editorial</option>
+            <option value="bold">Bold</option>
+          </select>
+        </div>
+        <div class="settings-field">
+          <label for="connectionStyleSelect">Connection Style</label>
+          <select id="connectionStyleSelect">
+            <option value="arc">Arc</option>
+            <option value="straight">Straight</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -469,6 +484,7 @@
           • The app uses A* pathfinding to plot realistic sea routes that avoid land masses and navigate through straits (Panama, Suez, Gibraltar, etc.)<br>
           • If two significantly different maritime routes exist, you'll be prompted to choose your preferred course<br>
           • In <strong>Connections</strong> mode, click <strong>Add connection</strong> and choose any two saved locations<br>
+          • Use <strong>Appearance → Connection Style</strong> to switch between clean straight links and curved presentation arcs<br>
           • Routes and connections both show distance in km and nautical miles when clicked
         </div>
       </div>
@@ -580,7 +596,7 @@
           • Press <strong>Esc</strong> to close any open modal<br>
           • Press <strong>Esc</strong> while drawing or measuring to cancel the active tool<br>
           • Deleting a point also removes any routes or connections attached to it<br>
-          • Info bubbles stay anchored to their points when dragged or resized — perfect for annotation workflows<br>
+          • Info bubbles stay anchored to their points when dragged or resized, and the typography compacts as the bubble gets smaller<br>
           • Light/dark mode follows your system preference automatically
         </div>
       </div>

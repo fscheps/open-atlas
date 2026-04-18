@@ -9,7 +9,7 @@ Open Atlas is a static browser application for building visual map atlases with:
 - ports or pinned locations
 - selectable map modes: `Maritime`, `Pins`, and `Connections`
 - maritime routes generated client-side
-- straight-line connections for network and flight-style maps
+- straight or curved-arc connections for network and flight-style maps
 - notes and draggable, resizable annotation bubbles
 - draft autosave
 - undo and redo
@@ -50,6 +50,8 @@ The project is intentionally:
 - Toggle draggable and resizable info bubbles
 - Move callouts freely around the visible map while their tails stay anchored to the selected point
 - Resize callouts in both width and height
+- Adjust callout style between `Subtle`, `Editorial`, and `Bold`
+- Let callout typography compact itself as the callout shrinks
 - Search saved locations by name or notes
 - Measure straight-line distance
 
@@ -61,10 +63,10 @@ The project is intentionally:
   - `Pins`
     Location-only maps with route creation disabled
   - `Connections`
-    Location-focused wording plus straight visual links between points
+    Location-focused wording plus straight or curved visual links between points
 - Sea route plotting via A* pathfinding on a rasterized land/sea grid
 - Alternative route choice when a second viable path is meaningfully different
-- Straight connection drawing between two saved points in `Connections` mode
+- Configurable straight or arc connection drawing between two saved points in `Connections` mode
 - Distance display in kilometers and nautical miles
 
 ### Persistence
@@ -81,6 +83,8 @@ The project is intentionally:
 - Theme mode
 - Basemap style, including a built-in `Presentation Flat` mode
 - Display, body, and UI fonts
+- Callout style
+- Connection style
 - Accent, marker, and route colors
 - Sea and land colors for presentation styling
 - Curated visual presets
@@ -118,7 +122,7 @@ The editable atlas export shape currently includes:
 ```json
 {
   "format": "open-atlas",
-  "version": 5,
+  "version": 6,
   "exported": "ISO timestamp",
   "view": {
     "center": [25, -30],
@@ -133,6 +137,8 @@ The editable atlas export shape currently includes:
     "displayFont": "fraunces",
     "bodyFont": "manrope",
     "uiFont": "ibmplexmono",
+    "calloutStyle": "editorial",
+    "connectionStyle": "arc",
     "accentColor": "#18567a",
     "markerColor": "#0b7a75",
     "routeColor": "#18567a",
@@ -164,7 +170,7 @@ The editable atlas export shape currently includes:
 
 Notes:
 
-- `version` is currently `5`
+- `version` is currently `6`
 - JSON is the source-of-truth editable format
 - GeoJSON is an export convenience format, not the primary editable schema
 - draft autosaves reuse the same atlas shape plus a `draftSavedAt` timestamp
@@ -212,7 +218,6 @@ Notes:
 - No backend
 - No user accounts
 - No server-side storage
-- `Connections` mode currently supports straight visual links only; curved arc styles are still future work
 - Current history is session-only, not persisted across reloads
 - Current export system renders DOM to canvas, so it is raster-first
 
@@ -231,7 +236,7 @@ Before calling a change done, verify:
 
 The best product expansion paths are:
 
-1. curved arc styling for `Connections` mode
-2. place search for creating locations by city name
-3. vendored dependencies and attribution docs for a cleaner OSS story
-4. self-hosted fonts and tighter CSP
+1. place search for creating locations by city name
+2. vendored dependencies and attribution docs for a cleaner OSS story
+3. self-hosted fonts and tighter CSP
+4. directional arrowheads for connections and air-route mode

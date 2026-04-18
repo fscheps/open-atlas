@@ -16,6 +16,7 @@ This file is meant for a future human contributor or another coding model.
 - plain JavaScript
 - Leaflet
 - html2canvas
+- Interact.js
 - topojson-client
 
 ## Current priorities
@@ -23,9 +24,9 @@ This file is meant for a future human contributor or another coding model.
 The highest-value next work is:
 
 1. open-source transparency and dependency vendoring
-2. expanding the newly shipped `Pins` and `Connections` modes
-3. preserving a polished export workflow
-4. improving language and discovery so saved-item search, place search, and future air-route flows are easier to understand
+2. place search and richer point metadata for the newly shipped `Pins` and `Connections` modes
+3. preserving a polished export workflow while adding more presentation options
+4. future air-route flows, directional arrows, and discovery improvements
 
 ## Important constraints
 

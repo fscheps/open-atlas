@@ -11,14 +11,15 @@ Rules for working this backlog:
 
 Current completion snapshot:
 
-- `B1`, `B2`, `B3`, and `B4` are now live:
+- `B1`, `B2`, `B3`, `B4`, and `B5` are now live:
   - mode selector
   - pins mode
   - mode-aware copy
   - straight-line connections mode
+  - selectable straight or arc connection styling
 - `C1`, `C2`, and `C3` (presentation style + sea/land controls) are already live and should be treated as complete.
 - `B8` search copy cleanup is now implemented.
-- `C4` annotation contrast and placement cleanup is now live with draggable/resizable callouts.
+- `C4` annotation contrast and placement cleanup is now live with draggable/resizable callouts, callout style presets, and adaptive callout typography.
 - Remaining tasks keep the same IDs and are still open.
 
 ## Track A: Open-source transparency

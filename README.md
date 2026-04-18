@@ -9,9 +9,11 @@ Open Atlas is a static, open-source map storytelling app built for easy sharing 
 - Place ports or locations directly on the map
 - Switch between `Maritime`, `Pins`, and `Connections` map modes
 - Draw sea routes that avoid land using client-side pathfinding
-- Draw straight visual connections for network and flight-style maps
+- Draw straight or curved arc connections for network and flight-style maps
 - Choose point icons and per-point colors for clearer map storytelling
 - Drag and resize map callouts freely while keeping them anchored to their points
+- Switch between `Subtle`, `Editorial`, and `Bold` callout treatments
+- Let callout text compact itself as the callout is resized smaller
 - Use the studio comfortably on desktop, tablet, and mobile layouts
 - Save and reopen atlases as JSON for continued editing
 - Autosave local drafts and restore them later from the control panel
@@ -20,6 +22,7 @@ Open Atlas is a static, open-source map storytelling app built for easy sharing 
 - Copy the current map view straight to the clipboard without downloading a file
 - Export map data as GeoJSON for GIS and downstream tooling
 - Customize title, subtitle, fonts, colors, theme mode, basemap style, and flat presentation sea/land colors
+- Choose connection style and callout style in the appearance controls
 - Keep everything fully static and GitHub Pages friendly
 
 ## Use it

@@ -32,10 +32,10 @@
   map.createPane('presentationLand');
   map.getPane('presentationLand').style.zIndex = 250;
   const BUBBLE_DEFAULT_WIDTH = 236;
-  const BUBBLE_MIN_WIDTH = 168;
+  const BUBBLE_MIN_WIDTH = 152;
   const BUBBLE_MAX_WIDTH = 520;
   const BUBBLE_DEFAULT_HEIGHT = 172;
-  const BUBBLE_MIN_HEIGHT = 116;
+  const BUBBLE_MIN_HEIGHT = 92;
   const BUBBLE_MAX_HEIGHT = 420;
   const BUBBLE_DEFAULT_RIGHT_OFFSET = 76;
   const BUBBLE_DEFAULT_LEFT_GAP = 56;
@@ -167,6 +167,8 @@
   const displayFontSelect = document.getElementById('displayFontSelect');
   const bodyFontSelect = document.getElementById('bodyFontSelect');
   const uiFontSelect = document.getElementById('uiFontSelect');
+  const calloutStyleSelect = document.getElementById('calloutStyleSelect');
+  const connectionStyleSelect = document.getElementById('connectionStyleSelect');
   const accentColorInput = document.getElementById('accentColorInput');
   const markerColorInput = document.getElementById('markerColorInput');
   const routeColorInput = document.getElementById('routeColorInput');
@@ -199,7 +201,7 @@
   const ATLAS_FORMAT = 'open-atlas';
   const LEGACY_ATLAS_FORMAT = 'mariners-atlas';
   const ATLAS_GEOJSON_FORMAT = 'open-atlas-geojson';
-  const ATLAS_VERSION = 5;
+  const ATLAS_VERSION = 6;
   const SETTINGS_STORAGE_KEY = 'open-atlas-settings-v2';
   const LEGACY_SETTINGS_STORAGE_KEY = 'mariners-atlas-settings-v1';
   const DRAFT_STORAGE_KEY = 'open-atlas-draft-v2';
@@ -263,6 +265,8 @@
       displayFont: 'cormorant',
       bodyFont: 'cormorant',
       uiFont: 'jetbrains',
+      calloutStyle: 'bold',
+      connectionStyle: 'straight',
       themeMode: 'auto',
       mapStyle: 'voyager_labels_under',
       seaColor: '#d6e1ea',
@@ -277,6 +281,8 @@
       displayFont: 'fraunces',
       bodyFont: 'manrope',
       uiFont: 'ibmplexmono',
+      calloutStyle: 'editorial',
+      connectionStyle: 'arc',
       themeMode: 'light',
       mapStyle: 'presentation',
       seaColor: '#d7e7f1',
@@ -291,6 +297,8 @@
       displayFont: 'playfair',
       bodyFont: 'cormorant',
       uiFont: 'jetbrains',
+      calloutStyle: 'bold',
+      connectionStyle: 'arc',
       themeMode: 'dark',
       mapStyle: 'presentation',
       seaColor: '#0f2636',
@@ -305,6 +313,8 @@
       displayFont: 'space',
       bodyFont: 'manrope',
       uiFont: 'ibmplexmono',
+      calloutStyle: 'subtle',
+      connectionStyle: 'arc',
       themeMode: 'light',
       mapStyle: 'voyager_nolabels',
       seaColor: '#d8e7e0',
@@ -320,6 +330,8 @@
     displayFont: 'fraunces',
     bodyFont: 'manrope',
     uiFont: 'ibmplexmono',
+    calloutStyle: 'editorial',
+    connectionStyle: 'arc',
     accentColor: '#18567a',
     markerColor: '#0b7a75',
     routeColor: '#18567a',
@@ -343,6 +355,8 @@
   let historyIndex = -1;
 
   const ATLAS_MODES = ['maritime', 'pins', 'connections'];
+  const CALLOUT_STYLES = ['subtle', 'editorial', 'bold'];
+  const CONNECTION_STYLES = ['straight', 'arc'];
 
   function updateStats() {
     portCountEl.textContent = markers.length;
@@ -405,6 +419,14 @@
     return ATLAS_MODES.includes(mode) ? mode : DEFAULT_SETTINGS.atlasMode;
   }
 
+  function normalizeCalloutStyle(style) {
+    return CALLOUT_STYLES.includes(style) ? style : DEFAULT_SETTINGS.calloutStyle;
+  }
+
+  function normalizeConnectionStyle(style) {
+    return CONNECTION_STYLES.includes(style) ? style : DEFAULT_SETTINGS.connectionStyle;
+  }
+
   function getAtlasMode() {
     return normalizeAtlasMode(settings.atlasMode);
   }
@@ -459,10 +481,10 @@
         workflowRoutes: '2 Connect points',
         routesLabel: 'Connections',
         intro: 'Click anywhere on the map to add locations, then connect, annotate, save, and share your map.',
-        createNote: 'Connections mode links saved locations with clean straight-line visuals for network and flight-style maps.',
+        createNote: 'Connections mode links saved locations with clean straight or arced visuals for network and flight-style maps.',
         drawIdle: 'Add connection',
         drawActive: 'Cancel connection',
-        drawHint: 'Click two locations to add a straight connection.',
+        drawHint: `Click two locations to add a ${normalizeConnectionStyle(settings.connectionStyle) === 'arc' ? 'curved arc' : 'straight'} connection.`,
         selectionFirst: 'Start point: ',
         selectionRepeat: 'Location deselected. Choose another location to continue.',
         chartButtonLabel: 'Add connection',
@@ -879,6 +901,8 @@
     displayFontSelect.value = settings.displayFont;
     bodyFontSelect.value = settings.bodyFont;
     uiFontSelect.value = settings.uiFont;
+    calloutStyleSelect.value = normalizeCalloutStyle(settings.calloutStyle);
+    connectionStyleSelect.value = normalizeConnectionStyle(settings.connectionStyle);
     accentColorInput.value = settings.accentColor;
     markerColorInput.value = settings.markerColor;
     routeColorInput.value = settings.routeColor;
@@ -902,9 +926,12 @@
     previewAltRouteSwatch.style.background = settings.routeAltColor;
     previewSeaSwatch.style.background = settings.seaColor;
     previewLandSwatch.style.background = settings.landColor;
+    const calloutLabel = normalizeCalloutStyle(settings.calloutStyle);
+    const connectionLabel = normalizeConnectionStyle(settings.connectionStyle);
     settingsPreviewNote.textContent = settings.mapStyle === 'presentation'
-      ? `Presentation Flat uses your custom sea and land palette for quieter ${copy.mode === 'maritime' ? 'atlas' : 'map'} exports.`
-      : 'Tile basemaps keep geographic labels while your overlays inherit the palette and type choices.';
+      ? `Presentation Flat uses your custom sea and land palette for quieter ${copy.mode === 'maritime' ? 'atlas' : 'map'} exports, with ${calloutLabel} callouts and ${connectionLabel} connections.`
+      : `Tile basemaps keep geographic labels while your overlays inherit the palette, type choices, ${calloutLabel} callout treatment, and ${connectionLabel} connections.`;
+    settingsPreview.dataset.calloutStyle = normalizeCalloutStyle(settings.calloutStyle);
   }
 
   function refreshModeUi() {
@@ -978,7 +1005,9 @@
     settings = {
       ...settings,
       ...nextSettings,
-      atlasMode: normalizeAtlasMode(nextSettings && nextSettings.atlasMode !== undefined ? nextSettings.atlasMode : settings.atlasMode)
+      atlasMode: normalizeAtlasMode(nextSettings && nextSettings.atlasMode !== undefined ? nextSettings.atlasMode : settings.atlasMode),
+      calloutStyle: normalizeCalloutStyle(nextSettings && nextSettings.calloutStyle !== undefined ? nextSettings.calloutStyle : settings.calloutStyle),
+      connectionStyle: normalizeConnectionStyle(nextSettings && nextSettings.connectionStyle !== undefined ? nextSettings.connectionStyle : settings.connectionStyle)
     };
     refreshThemeMode();
     document.documentElement.style.setProperty('--font-display', FONT_STACKS[settings.displayFont] || FONT_STACKS.cormorant);
@@ -1239,6 +1268,36 @@
     return normalizeBubbleHeight(entry.bubbleHeight) || estimateBubbleHeight(entry) || BUBBLE_DEFAULT_HEIGHT;
   }
 
+  function getMarkerRect(entry) {
+    const markerEl = entry.marker && entry.marker.getElement();
+    if (!markerEl) return null;
+    const markerRect = markerEl.getBoundingClientRect();
+    const mapRect = map.getContainer().getBoundingClientRect();
+    return {
+      left: markerRect.left - mapRect.left,
+      top: markerRect.top - mapRect.top,
+      right: markerRect.right - mapRect.left,
+      bottom: markerRect.bottom - mapRect.top,
+      width: markerRect.width,
+      height: markerRect.height
+    };
+  }
+
+  function getMarkerAnchorPoint(markerRect, targetX, targetY, fallbackX, fallbackY) {
+    if (!markerRect) return { x: fallbackX, y: fallbackY };
+    const cx = markerRect.left + markerRect.width / 2;
+    const cy = markerRect.top + markerRect.height / 2;
+    const dx = targetX - cx;
+    const dy = targetY - cy;
+    const halfW = Math.max(1, markerRect.width / 2);
+    const halfH = Math.max(1, markerRect.height / 2);
+    const scale = 1 / Math.max(Math.abs(dx) / halfW || 0, Math.abs(dy) / halfH || 0, 1);
+    return {
+      x: cx + dx * scale,
+      y: cy + dy * scale
+    };
+  }
+
   function getBubbleOffset(entry) {
     const offset = normalizeBubbleOffset(entry.bubbleOffset);
     if (!offset) return defaultBubbleOffset(entry.latlng, getBubbleWidth(entry));
@@ -1252,11 +1311,50 @@
     return clamp(BUBBLE_DEFAULT_HEIGHT + detailLines * 20, 132, 320);
   }
 
-  function buildBubbleTailGeometry(anchorX, anchorY, left, top, width, height) {
+  function getBubbleTypography(entry, layout) {
+    const titleLength = (entry.name || '').trim().length;
+    const bodyLength = (entry.details || '').trim().length;
+    const widthRatio = clamp(
+      (layout.width - BUBBLE_MIN_WIDTH) / Math.max(1, BUBBLE_DEFAULT_WIDTH - BUBBLE_MIN_WIDTH),
+      0,
+      1.35
+    );
+    const heightRatio = clamp(
+      (layout.height - BUBBLE_MIN_HEIGHT) / Math.max(1, BUBBLE_DEFAULT_HEIGHT - BUBBLE_MIN_HEIGHT),
+      0,
+      1.65
+    );
+    const sizeRatio = widthRatio * 0.58 + heightRatio * 0.42;
+    const textPressure = clamp((titleLength * 0.8 + bodyLength - 96) / 150, 0, 1.55);
+    const compactness = clamp(
+      (BUBBLE_DEFAULT_WIDTH - layout.width) / 92 + (BUBBLE_DEFAULT_HEIGHT - layout.height) / 92,
+      0,
+      1.55
+    );
+
+    return {
+      padX: Math.round(clamp(12, 14 + widthRatio * 5 - compactness * 2.2, 20)),
+      padTop: Math.round(clamp(10, 12 + heightRatio * 4 - compactness * 1.5, 18)),
+      padBottom: Math.round(clamp(10, 14 + heightRatio * 4 - compactness * 2.1, 20)),
+      gap: Math.round(clamp(4, 6 + heightRatio * 3 - compactness * 2.2, 10)),
+      titleSize: Math.round(clamp(9.2, 10 + sizeRatio * 1 - textPressure * 0.35, 11.8) * 10) / 10,
+      titleSpacing: Math.round(clamp(1.05, 1.45 + sizeRatio * 0.22 - textPressure * 0.1, 1.78) * 100) / 100,
+      bodySize: Math.round(clamp(12.2, 13.6 + sizeRatio * 1.7 - textPressure * 1.18, 16.8) * 10) / 10,
+      lineHeight: Math.round(clamp(1.18, 1.3 + sizeRatio * 0.08 - textPressure * 0.08, 1.44) * 100) / 100,
+      bodyRight: Math.round(clamp(8, 10 + widthRatio * 4 - compactness * 1.6, 18))
+    };
+  }
+
+  function buildBubbleTailGeometry(anchorX, anchorY, left, top, width, height, calloutStyle) {
     const rect = { left, top, right: left + width, bottom: top + height };
     const anchor = { x: anchorX, y: anchorY };
     const radius = 18;
-    const baseHalf = clamp(10, Math.min(width, height) * 0.08, 18);
+    const style = normalizeCalloutStyle(calloutStyle);
+    const baseHalf = style === 'bold'
+      ? clamp(14, Math.min(width, height) * 0.12, 22)
+      : style === 'subtle'
+        ? clamp(7, Math.min(width, height) * 0.06, 12)
+        : clamp(10, Math.min(width, height) * 0.08, 18);
     let p1;
     let p2;
     let baseCenter;
@@ -1290,11 +1388,23 @@
     const uy = dy / distance;
     const px = -uy;
     const py = ux;
-    const tipHalf = clamp(2.5, distance * 0.03, 5);
+    const tipHalf = style === 'bold'
+      ? clamp(4, distance * 0.04, 7)
+      : style === 'subtle'
+        ? clamp(1.8, distance * 0.018, 3.2)
+        : clamp(2.5, distance * 0.03, 5);
     const tip1 = { x: anchor.x + px * tipHalf, y: anchor.y + py * tipHalf };
     const tip2 = { x: anchor.x - px * tipHalf, y: anchor.y - py * tipHalf };
-    const curvePull = Math.min(70, distance * 0.42);
-    const basePull = Math.min(42, distance * 0.22);
+    const curvePull = style === 'bold'
+      ? Math.min(84, distance * 0.5)
+      : style === 'subtle'
+        ? Math.min(56, distance * 0.32)
+        : Math.min(70, distance * 0.42);
+    const basePull = style === 'bold'
+      ? Math.min(50, distance * 0.28)
+      : style === 'subtle'
+        ? Math.min(30, distance * 0.16)
+        : Math.min(42, distance * 0.22);
     const control1a = {
       x: p1.x + ux * basePull,
       y: p1.y + uy * basePull
@@ -1396,16 +1506,33 @@
     const { name, details } = entry;
     const safeDetails = escapeHtml(details || '').trim() || '<em style="opacity:.6">No details yet</em>';
     const bubbleAccent = normalizePointColor(entry.markerColor);
-    const tail = buildBubbleTailGeometry(layout.anchorX, layout.anchorY, layout.left, layout.top, layout.width, layout.height);
+    const baseCenterX = layout.left + layout.width / 2;
+    const baseCenterY = layout.top + layout.height / 2;
+    const markerRect = getMarkerRect(entry);
+    const markerAnchor = getMarkerAnchorPoint(markerRect, baseCenterX, baseCenterY, layout.anchorX, layout.anchorY);
+    const calloutStyle = normalizeCalloutStyle(settings.calloutStyle);
+    const tail = buildBubbleTailGeometry(markerAnchor.x, markerAnchor.y, layout.left, layout.top, layout.width, layout.height, calloutStyle);
     const mapSize = map.getSize();
     dom.tailSvg.setAttribute('viewBox', `0 0 ${mapSize.x} ${mapSize.y}`);
     dom.tailPath.setAttribute('d', tail.path);
     dom.card.dataset.bubbleId = String(entry.id);
+    dom.card.dataset.calloutStyle = calloutStyle;
+    entry.bubble.dataset.calloutStyle = calloutStyle;
     dom.card.style.setProperty('--bubble-accent', bubbleAccent);
     dom.card.style.left = `${layout.left}px`;
     dom.card.style.top = `${layout.top}px`;
     dom.card.style.width = `${layout.width}px`;
     dom.card.style.height = `${layout.height}px`;
+    const typography = getBubbleTypography(entry, layout);
+    dom.card.style.setProperty('--bubble-pad-x', `${typography.padX}px`);
+    dom.card.style.setProperty('--bubble-pad-top', `${typography.padTop}px`);
+    dom.card.style.setProperty('--bubble-pad-bottom', `${typography.padBottom}px`);
+    dom.card.style.setProperty('--bubble-gap', `${typography.gap}px`);
+    dom.card.style.setProperty('--bubble-title-size', `${typography.titleSize}px`);
+    dom.card.style.setProperty('--bubble-title-spacing', `${typography.titleSpacing}px`);
+    dom.card.style.setProperty('--bubble-body-size', `${typography.bodySize}px`);
+    dom.card.style.setProperty('--bubble-body-line-height', `${typography.lineHeight}`);
+    dom.card.style.setProperty('--bubble-body-right', `${typography.bodyRight}px`);
     const titleEl = dom.card.querySelector('.bubble-title');
     const bodyEl = dom.card.querySelector('.bubble-body');
     if (titleEl) titleEl.textContent = name;
@@ -1608,6 +1735,8 @@
     [displayFontSelect, 'change', () => applySettings({ displayFont: displayFontSelect.value })],
     [bodyFontSelect, 'change', () => applySettings({ bodyFont: bodyFontSelect.value })],
     [uiFontSelect, 'change', () => applySettings({ uiFont: uiFontSelect.value })],
+    [calloutStyleSelect, 'change', () => applySettings({ calloutStyle: calloutStyleSelect.value })],
+    [connectionStyleSelect, 'change', () => applySettings({ connectionStyle: connectionStyleSelect.value })],
     [accentColorInput, 'input', () => applySettings({ accentColor: accentColorInput.value })],
     [markerColorInput, 'input', () => applySettings({ markerColor: markerColorInput.value })],
     [routeColorInput, 'input', () => applySettings({ routeColor: routeColorInput.value })],
@@ -2110,15 +2239,16 @@
     const color = style === 'primary'
       ? getComputedStyle(document.documentElement).getPropertyValue('--route-color').trim()
       : getComputedStyle(document.documentElement).getPropertyValue('--route-alt-color').trim();
+    const renderLatLngs = getRenderableRouteLatLngs(latlngs, routeMode);
 
     if (routeMode === 'connection') {
-      const halo = L.polyline(latlngs, {
+      const halo = L.polyline(renderLatLngs, {
         color,
         weight: preview ? 9 : 7,
         opacity: preview ? 0.18 : 0.12,
         lineCap: 'round'
       });
-      const line = L.polyline(latlngs, {
+      const line = L.polyline(renderLatLngs, {
         color,
         weight: preview ? 3 : 2.5,
         opacity: 0.95,
@@ -2128,10 +2258,10 @@
       return L.layerGroup([halo, line]);
     }
 
-    const halo = L.polyline(latlngs, {
+    const halo = L.polyline(renderLatLngs, {
       color, weight: preview ? 10 : 8, opacity: preview ? 0.25 : 0.18, lineCap: 'round'
     });
-    const line = L.polyline(latlngs, {
+    const line = L.polyline(renderLatLngs, {
       color, weight: preview ? 3 : 2.5, opacity: 0.95,
       dashArray: '8, 10', lineCap: 'round'
     });
@@ -2222,6 +2352,60 @@
   routeChoiceModal.addEventListener('click', (e) => {
     if (e.target === routeChoiceModal) closeRouteChoice();
   });
+
+  function getNormalizedLngDelta(fromLng, toLng) {
+    let delta = toLng - fromLng;
+    while (delta > 180) delta -= 360;
+    while (delta < -180) delta += 360;
+    return delta;
+  }
+
+  function getRenderableConnectionLatLngs(latlngs) {
+    if (normalizeConnectionStyle(settings.connectionStyle) !== 'arc' || !Array.isArray(latlngs) || latlngs.length < 2) {
+      return latlngs;
+    }
+    const start = L.latLng(latlngs[0]);
+    const endSource = L.latLng(latlngs[latlngs.length - 1]);
+    const end = L.latLng(endSource.lat, start.lng + getNormalizedLngDelta(start.lng, endSource.lng));
+    const projectionZoom = 4;
+    const startPoint = map.project(start, projectionZoom);
+    const endPoint = map.project(end, projectionZoom);
+    const dx = endPoint.x - startPoint.x;
+    const dy = endPoint.y - startPoint.y;
+    const distance = Math.hypot(dx, dy);
+    if (!Number.isFinite(distance) || distance < 18) return [start, endSource];
+
+    const midpoint = L.point((startPoint.x + endPoint.x) / 2, (startPoint.y + endPoint.y) / 2);
+    const normal = L.point(-dy / distance, dx / distance);
+    const lift = clamp(distance * 0.22, 24, 96);
+    const optionA = L.point(normal.x * lift, normal.y * lift);
+    const optionB = L.point(-normal.x * lift, -normal.y * lift);
+    const chosen = optionA.y < optionB.y ? optionA : optionB;
+    const control = L.point(midpoint.x + chosen.x, midpoint.y + chosen.y);
+    const points = [];
+    let previousLng = null;
+
+    for (let step = 0; step <= 28; step += 1) {
+      const t = step / 28;
+      const mt = 1 - t;
+      const x = mt * mt * startPoint.x + 2 * mt * t * control.x + t * t * endPoint.x;
+      const y = mt * mt * startPoint.y + 2 * mt * t * control.y + t * t * endPoint.y;
+      const next = map.unproject(L.point(x, y), projectionZoom);
+      let lng = next.lng;
+      if (previousLng != null) {
+        while (lng - previousLng > 180) lng -= 360;
+        while (lng - previousLng < -180) lng += 360;
+      }
+      previousLng = lng;
+      points.push(L.latLng(next.lat, lng));
+    }
+    return points;
+  }
+
+  function getRenderableRouteLatLngs(latlngs, routeMode = 'maritime') {
+    if (routeMode === 'connection') return getRenderableConnectionLatLngs(latlngs);
+    return latlngs;
+  }
 
   function commitRoute(portA, portB, latlngs, km, variant, routeMode = 'maritime') {
     const group = drawRouteLayer(latlngs, variant, false, routeMode).addTo(map);
@@ -2829,7 +3013,7 @@
           type: 'Feature',
           geometry: {
             type: 'LineString',
-            coordinates: route.latlngs.map(([lat, lng]) => [lng, lat])
+            coordinates: getRenderableRouteLatLngs(route.latlngs, route.routeMode || 'maritime').map(([lat, lng]) => [lng, lat])
           },
           properties: {
             featureType: route.routeMode === 'connection' ? 'connection' : 'route',
