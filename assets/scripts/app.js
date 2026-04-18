@@ -1256,42 +1256,72 @@
     const rect = { left, top, right: left + width, bottom: top + height };
     const anchor = { x: anchorX, y: anchorY };
     const radius = 18;
-    const baseHalf = clamp(14, Math.min(width, height) * 0.12, 22);
+    const baseHalf = clamp(10, Math.min(width, height) * 0.08, 18);
     let p1;
     let p2;
+    let baseCenter;
 
     if (anchor.x < rect.left) {
       const cy = clamp(anchor.y, rect.top + radius + baseHalf, rect.bottom - radius - baseHalf);
       p1 = { x: rect.left, y: cy - baseHalf };
       p2 = { x: rect.left, y: cy + baseHalf };
+      baseCenter = { x: rect.left, y: cy };
     } else if (anchor.x > rect.right) {
       const cy = clamp(anchor.y, rect.top + radius + baseHalf, rect.bottom - radius - baseHalf);
       p1 = { x: rect.right, y: cy + baseHalf };
       p2 = { x: rect.right, y: cy - baseHalf };
+      baseCenter = { x: rect.right, y: cy };
     } else if (anchor.y < rect.top) {
       const cx = clamp(anchor.x, rect.left + radius + baseHalf, rect.right - radius - baseHalf);
       p1 = { x: cx + baseHalf, y: rect.top };
       p2 = { x: cx - baseHalf, y: rect.top };
+      baseCenter = { x: cx, y: rect.top };
     } else {
       const cx = clamp(anchor.x, rect.left + radius + baseHalf, rect.right - radius - baseHalf);
       p1 = { x: cx - baseHalf, y: rect.bottom };
       p2 = { x: cx + baseHalf, y: rect.bottom };
+      baseCenter = { x: cx, y: rect.bottom };
     }
 
-    const localAnchor = anchor;
-    const localP1 = p1;
-    const localP2 = p2;
-    const control1 = {
-      x: localP1.x + (localAnchor.x - localP1.x) * 0.58,
-      y: localP1.y + (localAnchor.y - localP1.y) * 0.58
+    const dx = anchor.x - baseCenter.x;
+    const dy = anchor.y - baseCenter.y;
+    const distance = Math.max(1, Math.hypot(dx, dy));
+    const ux = dx / distance;
+    const uy = dy / distance;
+    const px = -uy;
+    const py = ux;
+    const tipHalf = clamp(2.5, distance * 0.03, 5);
+    const tip1 = { x: anchor.x + px * tipHalf, y: anchor.y + py * tipHalf };
+    const tip2 = { x: anchor.x - px * tipHalf, y: anchor.y - py * tipHalf };
+    const curvePull = Math.min(70, distance * 0.42);
+    const basePull = Math.min(42, distance * 0.22);
+    const control1a = {
+      x: p1.x + ux * basePull,
+      y: p1.y + uy * basePull
     };
-    const control2 = {
-      x: localP2.x + (localAnchor.x - localP2.x) * 0.58,
-      y: localP2.y + (localAnchor.y - localP2.y) * 0.58
+    const control1b = {
+      x: tip1.x - ux * curvePull,
+      y: tip1.y - uy * curvePull
+    };
+    const control2a = {
+      x: tip2.x - ux * curvePull,
+      y: tip2.y - uy * curvePull
+    };
+    const control2b = {
+      x: p2.x + ux * basePull,
+      y: p2.y + uy * basePull
+    };
+    const baseReturn1 = {
+      x: p2.x + (baseCenter.x - p2.x) * 0.42,
+      y: p2.y + (baseCenter.y - p2.y) * 0.42
+    };
+    const baseReturn2 = {
+      x: p1.x + (baseCenter.x - p1.x) * 0.42,
+      y: p1.y + (baseCenter.y - p1.y) * 0.42
     };
 
     return {
-      path: `M ${localP1.x} ${localP1.y} Q ${control1.x} ${control1.y} ${localAnchor.x} ${localAnchor.y} Q ${control2.x} ${control2.y} ${localP2.x} ${localP2.y} Z`
+      path: `M ${p1.x} ${p1.y} C ${control1a.x} ${control1a.y} ${control1b.x} ${control1b.y} ${tip1.x} ${tip1.y} Q ${anchor.x} ${anchor.y} ${tip2.x} ${tip2.y} C ${control2a.x} ${control2a.y} ${control2b.x} ${control2b.y} ${p2.x} ${p2.y} C ${baseReturn1.x} ${baseReturn1.y} ${baseReturn2.x} ${baseReturn2.y} ${p1.x} ${p1.y} Z`
     };
   }
 
