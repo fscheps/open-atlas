@@ -84,8 +84,8 @@
   let seaReady = false;
 
   /* ===== DOM ===== */
-  const panelToggleBtn = document.getElementById('panelToggleBtn');
-  const panelToggleText = document.getElementById('panelToggleText');
+  const panelCollapseBtn = document.getElementById('panelCollapseBtn');
+  const panelReopenBtn = document.getElementById('panelReopenBtn');
   const drawBtn = document.getElementById('drawRouteBtn');
   const drawLabel = document.getElementById('drawRouteLabel');
   const clearBtn = document.getElementById('clearMapBtn');
@@ -509,9 +509,10 @@
   }
 
   function refreshPanelToggleUi() {
-    panelToggleText.textContent = panelHidden ? 'Open studio' : 'Focus map';
-    panelToggleBtn.setAttribute('aria-expanded', String(!panelHidden));
-    panelToggleBtn.setAttribute('aria-label', panelHidden ? 'Open the atlas studio sidebar' : 'Hide the atlas studio sidebar');
+    panelCollapseBtn.setAttribute('aria-expanded', String(!panelHidden));
+    panelCollapseBtn.setAttribute('aria-label', panelHidden ? 'Map studio is collapsed' : 'Collapse the map studio');
+    panelReopenBtn.setAttribute('aria-expanded', String(!panelHidden));
+    panelReopenBtn.setAttribute('aria-label', panelHidden ? 'Open the map studio' : 'Map studio is open');
   }
 
   function setPanelHidden(nextHidden, opts) {
@@ -1154,7 +1155,8 @@
   helpModal.addEventListener('click', (e) => {
     if (e.target === helpModal) helpModal.classList.remove('show');
   });
-  panelToggleBtn.addEventListener('click', () => setPanelHidden(!panelHidden));
+  panelCollapseBtn.addEventListener('click', () => setPanelHidden(true));
+  panelReopenBtn.addEventListener('click', () => setPanelHidden(false));
   workflowPortsBtn.addEventListener('click', () => {
     setPanelHidden(false);
     setDrawMode(false);
@@ -2535,7 +2537,7 @@
   setPanelHidden(
     storedUiPrefs && typeof storedUiPrefs.panelHidden === 'boolean'
       ? storedUiPrefs.panelHidden
-      : window.innerWidth <= 720,
+      : window.innerWidth <= 780,
     { persist: false }
   );
   updateExportTip();

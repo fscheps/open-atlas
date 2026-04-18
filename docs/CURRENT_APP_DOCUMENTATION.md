@@ -73,9 +73,10 @@ The project is intentionally:
 
 ### Workspace shell
 
-- Floating `Focus map` toggle to hide or restore the sidebar
+- Header collapse button plus same-edge reopen tab for the studio
 - Three-step workflow strip for `Add ports`, `Chart paths`, and `Export`
 - Scrollable sidebar with grouped sections for create, explore, save/share, workspace, and drafts
+- Bottom-sheet presentation on smaller screens for tablet and mobile use
 
 ### Export
 

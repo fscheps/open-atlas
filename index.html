@@ -16,11 +16,6 @@
 
 <div id="map"></div>
 
-<button class="panel-toggle" id="panelToggleBtn" type="button" aria-controls="appPanel" aria-expanded="true">
-  <i class="fa-solid fa-panorama"></i>
-  <span id="panelToggleText">Focus map</span>
-</button>
-
 <!-- Loader -->
 <div class="loader" id="loader">
   <svg class="compass-big" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -38,20 +33,26 @@
 
 <!-- Control Panel -->
 <aside class="control-panel" id="appPanel" aria-label="Open Atlas sidebar">
+  <div class="panel-sheet-handle" aria-hidden="true"></div>
   <div class="panel-header">
-    <svg class="compass" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.5">
-      <circle cx="50" cy="50" r="44"></circle>
-      <circle cx="50" cy="50" r="3" fill="currentColor"></circle>
-      <polygon points="50,12 55,50 50,88 45,50" fill="currentColor" stroke="none"></polygon>
-      <line x1="50" y1="4" x2="50" y2="14"></line>
-      <line x1="50" y1="86" x2="50" y2="96"></line>
-      <line x1="4" y1="50" x2="14" y2="50"></line>
-      <line x1="86" y1="50" x2="96" y2="50"></line>
-    </svg>
-    <div>
-      <div class="panel-title" id="atlasTitleText">Open Atlas</div>
-      <div class="panel-subtitle" id="atlasSubtitleText">Map Studio</div>
+    <div class="panel-header-main">
+      <svg class="compass" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.5">
+        <circle cx="50" cy="50" r="44"></circle>
+        <circle cx="50" cy="50" r="3" fill="currentColor"></circle>
+        <polygon points="50,12 55,50 50,88 45,50" fill="currentColor" stroke="none"></polygon>
+        <line x1="50" y1="4" x2="50" y2="14"></line>
+        <line x1="50" y1="86" x2="50" y2="96"></line>
+        <line x1="4" y1="50" x2="14" y2="50"></line>
+        <line x1="86" y1="50" x2="96" y2="50"></line>
+      </svg>
+      <div>
+        <div class="panel-title" id="atlasTitleText">Open Atlas</div>
+        <div class="panel-subtitle" id="atlasSubtitleText">Map Studio</div>
+      </div>
     </div>
+    <button class="panel-collapse-btn" id="panelCollapseBtn" type="button" aria-controls="appPanel" aria-expanded="true" aria-label="Collapse the map studio">
+      <i class="fa-solid fa-chevron-right"></i>
+    </button>
   </div>
 
   <div class="panel-intro">
@@ -175,6 +176,11 @@
     </div>
   </div>
 </aside>
+
+<button class="panel-reopen" id="panelReopenBtn" type="button" aria-controls="appPanel" aria-expanded="false">
+  <i class="fa-solid fa-sidebar"></i>
+  <span>Open studio</span>
+</button>
 
 <div class="charting" id="charting">
   <div class="dot"></div>
@@ -557,7 +563,8 @@
       <div class="help-section">
         <div class="help-title"><i class="fa-solid fa-lightbulb"></i> Tips</div>
         <div class="help-text">
-          • Use the top-left <strong>Focus map</strong> button whenever you want the canvas full-screen, then reopen the studio when you need the controls<br>
+          • Use the collapse button in the studio header to tuck the panel away, then reopen it from the same edge of the screen<br>
+          • On phones and tablets, the studio behaves like a bottom sheet so the map stays usable without losing the controls<br>
           • The three workflow chips near the top of the sidebar guide you through adding ports, charting routes, and exporting assets<br>
           • Routes use real maritime pathfinding — expect ships to navigate around continents and through major canals<br>
           • Press <strong>Esc</strong> to close any open modal<br>
