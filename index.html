@@ -1,0 +1,524 @@
+<!DOCTYPE html><html lang="en"><head><meta name="x-poe-datastore-behavior" content="local_only"><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://basemaps.cartocdn.com https://cdnjs.cloudflare.com https://unpkg.com https://i.imgur.com https://images.unsplash.com https://picsum.photos; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mariner's Atlas — Ship Route Tracker</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&family=JetBrains+Mono:wght@400;600&family=Manrope:wght@500;700&family=IBM+Plex+Mono:wght@400;600&family=Playfair+Display:wght@600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<link rel="stylesheet" href="assets/styles/app.css">
+
+
+</head>
+<body>
+
+<div id="map"></div>
+
+<!-- Loader -->
+<div class="loader" id="loader">
+  <svg class="compass-big" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.5">
+    <circle cx="50" cy="50" r="44"></circle>
+    <circle cx="50" cy="50" r="3" fill="currentColor"></circle>
+    <polygon points="50,12 55,50 50,88 45,50" fill="currentColor" stroke="none"></polygon>
+    <line x1="50" y1="4" x2="50" y2="14"></line>
+    <line x1="50" y1="86" x2="50" y2="96"></line>
+    <line x1="4" y1="50" x2="14" y2="50"></line>
+    <line x1="86" y1="50" x2="96" y2="50"></line>
+  </svg>
+  <div class="loader-title" id="loaderTitle">Mariner's Atlas</div>
+  <div class="loader-text" id="loaderText">Loading sea charts…</div>
+</div>
+
+<!-- Control Panel -->
+<aside class="control-panel" aria-label="Route control panel">
+  <div class="panel-header">
+    <svg class="compass" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.5">
+      <circle cx="50" cy="50" r="44"></circle>
+      <circle cx="50" cy="50" r="3" fill="currentColor"></circle>
+      <polygon points="50,12 55,50 50,88 45,50" fill="currentColor" stroke="none"></polygon>
+      <line x1="50" y1="4" x2="50" y2="14"></line>
+      <line x1="50" y1="86" x2="50" y2="96"></line>
+      <line x1="4" y1="50" x2="14" y2="50"></line>
+      <line x1="86" y1="50" x2="96" y2="50"></line>
+    </svg>
+    <div>
+      <div class="panel-title" id="atlasTitleText">Mariner's Atlas</div>
+      <div class="panel-subtitle" id="atlasSubtitleText">Route Cartographer</div>
+    </div>
+  </div>
+
+  <button class="btn" id="drawRouteBtn" disabled="">
+    <i class="fa-solid fa-route"></i>
+    <span id="drawRouteLabel">Draw Route</span>
+  </button>
+  <button class="btn btn-danger" id="clearMapBtn">
+    <i class="fa-solid fa-eraser"></i>
+    Clear Map
+  </button>
+
+  <div class="panel-section">
+    <div class="panel-section-label">Navigator Tools</div>
+    <button class="btn" id="findPortBtn">
+      <i class="fa-solid fa-magnifying-glass-location"></i>
+      Find Port
+    </button>
+    <button class="btn" id="measureBtn">
+      <i class="fa-solid fa-ruler"></i>
+      <span id="measureLabel">Measure Distance</span>
+    </button>
+  </div>
+
+  <div class="panel-section">
+    <div class="panel-section-label">Logbook</div>
+    <button class="btn" id="exportPngBtn">
+      <i class="fa-solid fa-image"></i>
+      Export PNG
+    </button>
+    <button class="btn" id="exportJsonBtn">
+      <i class="fa-solid fa-file-export"></i>
+      Export JSON
+    </button>
+    <button class="btn" id="exportGeoJsonBtn">
+      <i class="fa-solid fa-layer-group"></i>
+      Export GeoJSON
+    </button>
+    <button class="btn" id="importJsonBtn">
+      <i class="fa-solid fa-file-import"></i>
+      Import JSON
+    </button>
+    <input type="file" id="jsonFileInput" accept=".json,application/json">
+  </div>
+
+  <div class="panel-section">
+    <div class="panel-section-label">History</div>
+    <div class="dual-action-grid">
+      <button class="btn" id="undoBtn" disabled="">
+        <i class="fa-solid fa-rotate-left"></i>
+        Undo
+      </button>
+      <button class="btn" id="redoBtn" disabled="">
+        <i class="fa-solid fa-rotate-right"></i>
+        Redo
+      </button>
+    </div>
+    <div class="draft-note" id="historyNote">Use Cmd/Ctrl+Z to rewind changes.</div>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-val" id="portCount">0</div>
+      <div class="stat-lbl">Ports</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="routeCount">0</div>
+      <div class="stat-lbl">Routes</div>
+    </div>
+  </div>
+
+  <div class="chart-state" id="chartState">Preparing charts…</div>
+
+  <div class="panel-section panel-section-tight">
+    <div class="panel-section-label">Drafts</div>
+    <div class="draft-actions">
+      <button class="btn" id="restoreDraftBtn" disabled="">
+        <i class="fa-solid fa-rotate-left"></i>
+        Restore Draft
+      </button>
+      <button class="btn btn-quiet" id="discardDraftBtn" disabled="">
+        <i class="fa-solid fa-trash-can"></i>
+        Discard Draft
+      </button>
+    </div>
+    <div class="draft-note" id="draftNote">Drafts autosave in your browser while you work.</div>
+  </div>
+
+  <div class="panel-section panel-section-tight">
+    <button class="btn" id="settingsBtn">
+      <i class="fa-solid fa-sliders"></i>
+      Studio Settings
+    </button>
+    <button class="btn" id="helpBtn" style="margin-top:8px; margin-bottom:0;">
+      <i class="fa-solid fa-circle-question"></i>
+      Help &amp; FAQ
+    </button>
+  </div>
+</aside>
+
+<div class="charting" id="charting">
+  <div class="dot"></div>
+  <span>Plotting sea route…</span>
+</div>
+
+<!-- Hint toast -->
+<div class="hint" id="hint">
+  <i class="fa-solid fa-anchor"></i>
+  <span id="hintText"></span>
+</div>
+
+<!-- Name input modal -->
+<div class="modal-backdrop" id="nameModal">
+  <div class="modal">
+    <h3>Name this Port</h3>
+    <div class="modal-sub">Lat <span id="modalLat">—</span> • Lng <span id="modalLng">—</span></div>
+    <input id="portNameInput" type="text" placeholder="e.g. Port of Lisbon" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn" id="modalCancel" style="background:transparent; color:var(--ink-soft);">
+        <i class="fa-solid fa-xmark"></i> Cancel
+      </button>
+      <button class="btn" id="modalSave">
+        <i class="fa-solid fa-anchor"></i> Anchor
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Port details modal -->
+<div class="modal-backdrop" id="portModal">
+  <div class="modal" style="min-width: 360px;">
+    <h3 id="portModalTitle">Port Details</h3>
+    <div class="modal-sub" id="portModalSub">—</div>
+
+    <span class="field-label">Port Name</span>
+    <input id="portEditName" type="text" autocomplete="off">
+
+    <span class="field-label">Notes &amp; Cargo</span>
+    <textarea id="portEditDetails" placeholder="Logbook notes, cargo manifest, weather, hazards…"></textarea>
+
+    <div class="check-row" id="bubbleToggleRow">
+      <input type="checkbox" id="bubbleToggle">
+      <label for="bubbleToggle">Display info bubble on map</label>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="portDeleteBtn" style="margin-right:auto;">
+        <i class="fa-solid fa-trash"></i> Delete Port
+      </button>
+      <button class="btn" id="portCancelBtn" style="background:transparent; color:var(--ink-soft);">
+        <i class="fa-solid fa-xmark"></i> Cancel
+      </button>
+      <button class="btn" id="portSaveBtn">
+        <i class="fa-solid fa-floppy-disk"></i> Save
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Export options modal -->
+<div class="modal-backdrop" id="exportModal">
+  <div class="modal" style="min-width: 360px; max-width: 560px;">
+    <h3 id="exportModalTitle">Export PNG</h3>
+    <div class="modal-sub" id="exportModalSub">Choose the framing and output quality.</div>
+    <div class="settings-grid">
+      <div class="settings-field">
+        <label for="exportScopeSelect">Layout</label>
+        <select id="exportScopeSelect">
+          <option value="map-only">Map Only</option>
+          <option value="studio">Studio View</option>
+        </select>
+      </div>
+      <div class="settings-field">
+        <label for="exportAreaSelect">Framing</label>
+        <select id="exportAreaSelect">
+          <option value="current-view">Current View</option>
+          <option value="fit-atlas">Fit Atlas Content</option>
+        </select>
+      </div>
+      <div class="settings-field full-span">
+        <label for="exportQualitySelect">Quality</label>
+        <select id="exportQualitySelect">
+          <option value="high">High</option>
+          <option value="ultra">Ultra</option>
+          <option value="standard">Standard</option>
+        </select>
+      </div>
+    </div>
+    <div class="settings-tip" id="exportTip">Map-only export captures the current viewport at high quality.</div>
+    <div class="modal-actions">
+      <button class="btn btn-quiet" id="exportCloseBtn">
+        <i class="fa-solid fa-xmark"></i> Close
+      </button>
+      <button class="btn" id="exportConfirmBtn">
+        <i class="fa-solid fa-file-image"></i> Render PNG
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Route choice modal -->
+<div class="modal-backdrop" id="routeChoiceModal">
+  <div class="modal">
+    <h3>Choose Your Course</h3>
+    <div class="modal-sub" id="routeChoiceSub">Two viable sea routes detected.</div>
+    <div class="route-choices" id="routeChoices"></div>
+    <div class="modal-actions">
+      <button class="btn" id="routeChoiceCancel" style="background:transparent; color:var(--ink-soft);">
+        <i class="fa-solid fa-xmark"></i> Abandon
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Port search modal -->
+<div class="modal-backdrop" id="searchModal">
+  <div class="modal" style="min-width: 360px; max-width: 520px;">
+    <h3>Find a Port</h3>
+    <div class="modal-sub">Jump directly to a named harbor in the atlas</div>
+    <input id="portSearchInput" type="text" placeholder="Search by port name or notes" autocomplete="off">
+    <div class="search-results" id="portSearchResults"></div>
+    <div class="modal-actions">
+      <button class="btn" id="searchCloseBtn" style="background:transparent; color:var(--ink-soft);">
+        <i class="fa-solid fa-xmark"></i> Close
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div class="modal-backdrop" id="settingsModal">
+  <div class="modal" style="min-width: 380px; max-width: 680px;">
+    <h3>Studio Settings</h3>
+    <div class="modal-sub">Customize the atlas look, fonts, and export personality</div>
+
+    <div class="settings-grid full">
+      <div class="settings-field">
+        <label for="settingsTitleInput">Atlas Title</label>
+        <input id="settingsTitleInput" type="text" placeholder="Mariner's Atlas" autocomplete="off">
+      </div>
+      <div class="settings-field">
+        <label for="settingsSubtitleInput">Atlas Subtitle</label>
+        <input id="settingsSubtitleInput" type="text" placeholder="Route Cartographer" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Curated Presets</div>
+      <div class="settings-preset-grid" id="presetGrid"></div>
+      <div class="settings-tip">Presets update the palette and fonts instantly. JSON exports include your selected look so collaborators can reopen the same visual style.</div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-grid">
+        <div class="settings-field">
+          <label for="themeModeSelect">Theme Mode</label>
+          <select id="themeModeSelect">
+            <option value="auto">Auto</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
+        <div class="settings-field">
+          <label for="mapStyleSelect">Base Map</label>
+          <select id="mapStyleSelect">
+            <option value="voyager_labels_under">Voyager Labels</option>
+            <option value="positron">Positron</option>
+            <option value="voyager_nolabels">Voyager No Labels</option>
+            <option value="dark_matter">Dark Matter</option>
+          </select>
+        </div>
+        <div class="settings-field">
+          <label for="displayFontSelect">Display Font</label>
+          <select id="displayFontSelect"></select>
+        </div>
+        <div class="settings-field">
+          <label for="bodyFontSelect">Body Font</label>
+          <select id="bodyFontSelect"></select>
+        </div>
+        <div class="settings-field">
+          <label for="uiFontSelect">UI Font</label>
+          <select id="uiFontSelect"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-grid">
+        <div class="settings-field">
+          <label for="accentColorInput">Accent</label>
+          <input id="accentColorInput" type="color">
+        </div>
+        <div class="settings-field">
+          <label for="markerColorInput">Port Marker</label>
+          <input id="markerColorInput" type="color">
+        </div>
+        <div class="settings-field">
+          <label for="routeColorInput">Primary Route</label>
+          <input id="routeColorInput" type="color">
+        </div>
+        <div class="settings-field">
+          <label for="routeAltColorInput">Alternative Route</label>
+          <input id="routeAltColorInput" type="color">
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-quiet" id="settingsResetBtn">
+        <i class="fa-solid fa-rotate-left"></i> Reset
+      </button>
+      <button class="btn btn-quiet" id="settingsCloseBtn">
+        <i class="fa-solid fa-xmark"></i> Close
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Help/FAQ modal -->
+<div class="modal-backdrop" id="helpModal">
+  <div class="modal" style="max-width: 600px;">
+    <h3>Mariner's Atlas — Guide</h3>
+    <div class="modal-sub">Quick reference for navigating the atlas</div>
+
+    <div style="margin-top: 20px; max-height: 60vh; overflow-y: auto; padding-right: 8px;">
+      <div class="help-section">
+        <div class="help-title"><i class="fa-solid fa-anchor"></i> Adding Ports</div>
+        <div class="help-text">
+          • Click anywhere on the map to anchor a new port<br>
+          • Enter a name in the dialog (or leave blank for auto-numbering)<br>
+          • Ports display with permanent labels showing their names<br>
+          • Click any port to edit its details, add notes, or delete it
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-title"><i class="fa-solid fa-route"></i> Drawing Sea Routes</div>
+        <div class="help-text">
+          • Wait for "Sea charts loaded" to appear in the control panel<br>
+          • Click the <strong>Draw Route</strong> button<br>
+          • Click two ports to chart a maritime route between them<br>
+          • The app uses A* pathfinding to plot realistic sea routes that avoid land masses and navigate through straits (Panama, Suez, Gibraltar, etc.)<br>
+          • If two significantly different routes exist, you'll be prompted to choose your preferred course<br>
+          • Routes show distance in km and nautical miles when clicked
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-title"><i class="fa-solid fa-note-sticky"></i> Port Info Bubbles</div>
+        <div class="help-text">
+          • Click any port to open its details<br>
+          • Add notes in the "Notes &amp; Cargo" field (cargo manifest, hazards, weather, etc.)<br>
+          • Check <strong>"Display info bubble on map"</strong> to show a callout<br>
+          • The bubble appears as a draggable speech balloon connected to the port<br>
+          • <strong>Drag the bubble</strong> to reposition it anywhere on the map<br>
+          • Uncheck the box and save to hide the bubble
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-title"><i class="fa-solid fa-compass-drafting"></i> Navigator Tools</div>
+        <div class="help-text">
+          • Click <strong>Find Port</strong> to search by port name or saved notes<br>
+          • Selecting a match jumps the map to that port and briefly highlights it<br>
+          • Click <strong>Measure Distance</strong> to start the straight-line ruler<br>
+          • Click any two points on the map to measure great-circle distance in km and nautical miles<br>
+          • Measurements are visual aids only and are not included in JSON exports
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-title"><i class="fa-solid fa-image"></i> Exporting as PNG</div>
+        <div class="help-text">
+          • Click <strong>Export PNG</strong> in the Logbook section<br>
+          • Choose between <strong>Map Only</strong> and <strong>Studio View</strong> before rendering<br>
+          • Capture either the current viewport or automatically fit all ports and routes into frame<br>
+          • Pick standard, high, or ultra output quality depending on how heavy you want the file to be<br>
+          • The PNG is saved with a timestamp: <code>mariners-atlas-YYYY-MM-DD...</code><br>
+          • High-resolution output suitable for printing or sharing
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-title"><i class="fa-solid fa-file-export"></i> Exporting as JSON</div>
+        <div class="help-text">
+          • Click <strong>Export JSON</strong> to save your entire atlas<br>
+          • The JSON file includes all ports (names, coordinates, notes, bubble positions), all routes (exact paths, distances), and the current map view<br>
+          • Save this file to back up your work or share it with others<br>
+          • Filename format: <code>mariners-atlas-YYYY-MM-DD...</code>
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-title"><i class="fa-solid fa-layer-group"></i> Exporting as GeoJSON</div>
+        <div class="help-text">
+          • Click <strong>Export GeoJSON</strong> to create an interoperable map data file<br>
+          • Ports become point features and routes become line features<br>
+          • GeoJSON is ideal for GIS tools, notebooks, or downstream custom workflows<br>
+          • The file also carries atlas metadata and theme settings
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-title"><i class="fa-solid fa-file-import"></i> Importing from JSON</div>
+        <div class="help-text">
+          • Click <strong>Import JSON</strong> and select a previously exported atlas file<br>
+          • The current map will be cleared and replaced with the imported data<br>
+          • All ports, routes, notes, and bubble positions are restored exactly as saved<br>
+          • The camera view (zoom and center) is also restored<br>
+          • Use this to continue working on a saved atlas or load someone else's routes
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-title"><i class="fa-solid fa-sliders"></i> Studio Settings</div>
+        <div class="help-text">
+          • Open <strong>Studio Settings</strong> to tune fonts, colors, theme mode, and the basemap style<br>
+          • Atlas title and subtitle are part of your saved JSON and GeoJSON metadata<br>
+          • Theme choices are also stored in your browser so the workspace reopens with your preferred look
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-title"><i class="fa-solid fa-clock-rotate-left"></i> Undo &amp; Redo</div>
+        <div class="help-text">
+          • Use <strong>Undo</strong> and <strong>Redo</strong> in the History section to step through atlas edits<br>
+          • Keyboard shortcuts: <strong>Cmd/Ctrl+Z</strong> to undo, <strong>Shift+Cmd/Ctrl+Z</strong> or <strong>Ctrl+Y</strong> to redo<br>
+          • Imports, port edits, route changes, and visual settings all participate in history
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-title"><i class="fa-solid fa-lightbulb"></i> Tips</div>
+        <div class="help-text">
+          • Routes use real maritime pathfinding — expect ships to navigate around continents and through major canals<br>
+          • Press <strong>Esc</strong> to close any open modal<br>
+          • Press <strong>Esc</strong> while drawing or measuring to cancel the active tool<br>
+          • Deleting a port also removes any routes connected to it<br>
+          • Info bubbles stay anchored to their ports when dragged — perfect for annotation workflows<br>
+          • Light/dark mode follows your system preference automatically
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" id="helpCloseBtn" style="width:100%;">
+        <i class="fa-solid fa-xmark"></i> Close
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm modal -->
+<div class="modal-backdrop" id="confirmModal">
+  <div class="modal">
+    <h3>Clear the Atlas?</h3>
+    <div class="modal-sub">This removes all ports and routes.</div>
+    <div class="modal-actions">
+      <button class="btn" id="confirmCancel" style="background:transparent; color:var(--ink-soft);">
+        <i class="fa-solid fa-xmark"></i> Keep
+      </button>
+      <button class="btn btn-danger" id="confirmOk">
+        <i class="fa-solid fa-trash"></i> Clear
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/topojson-client@3/dist/topojson-client.min.js"></script>
+<script src="assets/scripts/app.js"></script>
+
+
+
+
+</body></html>

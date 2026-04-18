@@ -1,0 +1,2455 @@
+<!DOCTYPE html><html lang="en"><head><meta name="x-poe-datastore-behavior" content="local_only"><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://basemaps.cartocdn.com https://cdnjs.cloudflare.com https://unpkg.com https://i.imgur.com https://images.unsplash.com https://picsum.photos; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mariner's Atlas — Ship Route Tracker</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;700&amp;family=JetBrains+Mono:wght@400;600&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<style>
+  :root {
+    --bg: #f4ecd8;
+    --panel: #fbf5e6;
+    --ink: #2b1b0f;
+    --ink-soft: #5c4433;
+    --accent: #8b2e1f;
+    --accent-hover: #a83a28;
+    --gold: #b8891f;
+    --border: rgba(43, 27, 15, 0.25);
+    --shadow: 0 10px 30px rgba(43, 27, 15, 0.25);
+    --marker-fill: #8b2e1f;
+    --route-color: #1a4a6e;
+    --route-alt-color: #8b2e1f;
+    --route-glow: rgba(26, 74, 110, 0.4);
+    --grid-stroke: rgba(43, 27, 15, 0.08);
+    --toast-bg: rgba(43, 27, 15, 0.95);
+    --toast-ink: #fbf5e6;
+    --label-bg: rgba(251, 245, 230, 0.92);
+    --label-ink: #2b1b0f;
+  }
+
+  html.dark {
+    --bg: #0c1821;
+    --panel: #132838;
+    --ink: #e8dcc4;
+    --ink-soft: #a89878;
+    --accent: #d4a95a;
+    --accent-hover: #ebc06e;
+    --gold: #d4a95a;
+    --border: rgba(212, 169, 90, 0.3);
+    --shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+    --marker-fill: #d4a95a;
+    --route-color: #5cc2e0;
+    --route-alt-color: #e89865;
+    --route-glow: rgba(92, 194, 224, 0.4);
+    --grid-stroke: rgba(212, 169, 90, 0.08);
+    --toast-bg: rgba(232, 220, 196, 0.95);
+    --toast-ink: #0c1821;
+    --label-bg: rgba(19, 40, 56, 0.92);
+    --label-ink: #e8dcc4;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: 'Cormorant Garamond', serif;
+    background: var(--bg);
+    color: var(--ink);
+    overflow: hidden;
+  }
+
+  #map {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: var(--bg);
+  }
+
+  html.dark #map {
+    filter: brightness(0.85) contrast(1.05) hue-rotate(-10deg);
+  }
+
+  /* Control Panel */
+  .control-panel {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    z-index: 1000;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    box-shadow: var(--shadow);
+    padding: 16px;
+    min-width: 240px;
+    max-width: calc(100vw - 36px);
+    background-image: repeating-linear-gradient(0deg, transparent 0 22px, var(--grid-stroke) 22px 23px);
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px double var(--border);
+    margin-bottom: 12px;
+  }
+
+  .panel-header .compass {
+    width: 28px;
+    height: 28px;
+    color: var(--accent);
+    animation: rotateSlow 22s linear infinite;
+  }
+
+  @keyframes rotateSlow {
+    from { transform: rotate(0); }
+    to { transform: rotate(360deg); }
+  }
+
+  .panel-title {
+    font-weight: 700;
+    font-size: 20px;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--ink);
+    line-height: 1;
+  }
+
+  .panel-subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2.5px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 11px 14px;
+    margin-bottom: 8px;
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn:hover:not(:disabled) {
+    background: var(--accent);
+    color: #fbf5e6;
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+
+  html.dark .btn:hover:not(:disabled) { color: #0c1821; }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn:last-child { margin-bottom: 0; }
+
+  .btn.active {
+    background: var(--accent);
+    color: #fbf5e6;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-hover) inset, 0 0 12px var(--accent);
+  }
+
+  html.dark .btn.active { color: #0c1821; }
+
+  .btn i { font-size: 12px; }
+
+  .btn-tool-active {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: #fbf5e6;
+  }
+
+  html.dark .btn-tool-active { color: #0c1821; }
+
+  .btn-danger:hover {
+    background: #6b1515;
+    border-color: #6b1515;
+  }
+
+  html.dark .btn-danger:hover {
+    background: #8b4a1f;
+    border-color: #8b4a1f;
+    color: #fbf5e6;
+  }
+
+  .stats {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px double var(--border);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .stat {
+    flex: 1;
+    text-align: center;
+  }
+
+  .stat-val {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .stat-lbl {
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .chart-state {
+    margin-top: 10px;
+    padding: 6px 8px;
+    border: 1px dashed var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-align: center;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+  }
+  .chart-state.ready { color: var(--accent); }
+
+  /* Hint toast */
+  .hint {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: var(--toast-bg);
+    color: var(--toast-ink);
+    padding: 10px 20px;
+    border-radius: 2px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    box-shadow: var(--shadow);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    max-width: 90vw;
+    text-align: center;
+  }
+  .hint.visible { opacity: 1; }
+  .hint i { margin-right: 8px; color: var(--gold); }
+
+  /* Loading overlay */
+  .loader {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    transition: opacity 0.4s ease;
+  }
+  .loader.hidden { opacity: 0; pointer-events: none; }
+  .loader .compass-big {
+    width: 70px;
+    height: 70px;
+    color: var(--accent);
+    animation: rotateSlow 6s linear infinite;
+  }
+  .loader-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .loader-title {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+
+  /* Port marker */
+  .port-marker { background: transparent; border: none; }
+  .port-marker-inner {
+    width: 28px;
+    height: 28px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .port-marker-inner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--marker-fill);
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+    border: 2px solid var(--panel);
+  }
+  .port-marker-inner i {
+    position: relative;
+    z-index: 2;
+    color: var(--panel);
+    font-size: 11px;
+    transform: translateY(-2px);
+  }
+  .port-marker.selectable .port-marker-inner::before {
+    animation: pulse 1.2s infinite ease-in-out;
+  }
+  .port-marker.selected .port-marker-inner::before {
+    background: var(--gold);
+    box-shadow: 0 0 0 6px var(--route-glow), 0 3px 8px rgba(0,0,0,0.4);
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 var(--route-glow), 0 3px 8px rgba(0,0,0,0.4); }
+    50% { box-shadow: 0 0 0 12px transparent, 0 3px 8px rgba(0,0,0,0.4); }
+  }
+
+  /* Permanent port labels */
+  .port-label {
+    background: var(--label-bg) !important;
+    color: var(--label-ink) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 2px !important;
+    padding: 3px 8px !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    letter-spacing: 1px !important;
+    text-transform: uppercase !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15) !important;
+    white-space: nowrap !important;
+  }
+  .port-label::before { display: none !important; }
+
+  /* Info bubble - callout style with pointer */
+  .bubble-marker { background: transparent !important; border: none !important; }
+  .info-bubble {
+    background: var(--label-bg);
+    color: var(--label-ink);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px 12px 16px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 15px;
+    line-height: 1.4;
+    max-width: 260px;
+    min-width: 140px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    cursor: move;
+    position: relative;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    backdrop-filter: blur(3px);
+  }
+  /* Triangular pointer */
+  .info-bubble::before {
+    content: '';
+    position: absolute;
+    bottom: -11px;
+    left: 20px;
+    width: 0;
+    height: 0;
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-top: 12px solid var(--label-bg);
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.15));
+  }
+  /* Pointer border outline */
+  .info-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -12px;
+    left: 19px;
+    width: 0;
+    height: 0;
+    border-left: 13px solid transparent;
+    border-right: 13px solid transparent;
+    border-top: 13px solid var(--border);
+    z-index: -1;
+  }
+  .info-bubble .bubble-handle {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 1px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    opacity: 0.65;
+    pointer-events: none;
+  }
+  .info-bubble .bubble-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+
+  /* Divider / Section label in control panel */
+  .panel-section {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px double var(--border);
+  }
+  .panel-section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 2px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+
+  /* Textarea in modal */
+  .modal textarea {
+    width: 100%;
+    min-height: 90px;
+    padding: 10px 12px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 16px;
+    color: var(--ink);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    outline: none;
+    resize: vertical;
+    transition: border-color 0.2s;
+    margin-top: 8px;
+  }
+  .modal textarea:focus { border-color: var(--accent); }
+
+  .modal .check-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 10px 12px;
+    border: 1px dashed var(--border);
+    cursor: pointer;
+    user-select: none;
+  }
+  .modal .check-row input {
+    width: auto;
+    margin: 0;
+    accent-color: var(--accent);
+    transform: scale(1.2);
+    cursor: pointer;
+  }
+  .modal .check-row label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  .modal .field-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-top: 14px;
+    display: block;
+  }
+
+  /* Hide UI during export */
+  body.exporting .control-panel,
+  body.exporting .hint,
+  body.exporting .charting,
+  body.exporting .modal-backdrop,
+  body.exporting .leaflet-control-container {
+    display: none !important;
+  }
+
+  /* Hidden file input */
+  #jsonFileInput { display: none; }
+
+  /* Help sections */
+  .help-section {
+    margin-bottom: 18px;
+    padding-bottom: 16px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .help-section:last-child { border-bottom: none; }
+  .help-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .help-title i { font-size: 13px; }
+  .help-text {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+  .help-text code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: rgba(0,0,0,0.08);
+    padding: 2px 6px;
+    border-radius: 2px;
+    color: var(--accent);
+  }
+  html.dark .help-text code { background: rgba(255,255,255,0.08); }
+
+  /* Modal */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(12, 24, 33, 0.6);
+    backdrop-filter: blur(3px);
+    z-index: 2000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+  }
+  .modal-backdrop.show { display: flex; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .modal {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 28px;
+    min-width: 320px;
+    max-width: 90vw;
+    box-shadow: var(--shadow);
+    animation: slideUp 0.25s ease;
+    background-image: repeating-linear-gradient(0deg, transparent 0 22px, var(--grid-stroke) 22px 23px);
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(15px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .modal h3 {
+    margin: 0 0 6px 0;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+
+  .modal .modal-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .modal input {
+    width: 100%;
+    padding: 12px 14px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px;
+    color: var(--ink);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid var(--border);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .modal input:focus { border-bottom-color: var(--accent); }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .modal-actions .btn {
+    width: auto;
+    margin: 0;
+    padding: 10px 18px;
+  }
+
+  /* Route choice cards */
+  .route-choices {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .route-card {
+    border: 1px solid var(--border);
+    padding: 12px 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s ease;
+    background: transparent;
+    text-align: left;
+    font-family: inherit;
+    color: var(--ink);
+    width: 100%;
+  }
+  .route-card:hover {
+    border-color: var(--accent);
+    transform: translateX(3px);
+  }
+  .route-card .swatch {
+    width: 32px;
+    height: 4px;
+    flex-shrink: 0;
+  }
+  .route-card .route-title {
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .route-card .route-dist {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--ink-soft);
+    margin-top: 2px;
+  }
+
+  .search-results {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 14px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .search-empty {
+    border: 1px dashed var(--border);
+    padding: 14px 16px;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .search-result {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .search-result:hover {
+    border-color: var(--accent);
+    transform: translateX(3px);
+  }
+
+  .search-result-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.3px;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .search-result-meta {
+    margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--ink-soft);
+  }
+
+  .search-result-notes {
+    margin-top: 6px;
+    font-size: 14px;
+    line-height: 1.35;
+    color: var(--ink);
+    opacity: 0.8;
+  }
+
+  .port-marker.search-hit .port-marker-inner::before {
+    animation: searchPulse 1.2s ease;
+  }
+
+  @keyframes searchPulse {
+    0% { box-shadow: 0 0 0 0 rgba(184, 137, 31, 0.65), 0 3px 8px rgba(0,0,0,0.4); }
+    55% { box-shadow: 0 0 0 18px transparent, 0 3px 8px rgba(0,0,0,0.4); }
+    100% { box-shadow: 0 0 0 0 transparent, 0 3px 8px rgba(0,0,0,0.4); }
+  }
+
+  /* Leaflet overrides */
+  .leaflet-popup-content-wrapper {
+    background: var(--panel);
+    color: var(--ink);
+    border-radius: 2px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+  }
+  .leaflet-popup-content {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 16px;
+    margin: 10px 14px;
+  }
+  .leaflet-popup-tip {
+    background: var(--panel);
+    border: 1px solid var(--border);
+  }
+  .port-popup strong {
+    display: block;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .port-popup .coord {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-soft);
+    letter-spacing: 1px;
+    margin-top: 3px;
+  }
+
+  .leaflet-container { font-family: 'JetBrains Mono', monospace; }
+  .leaflet-control-attribution {
+    background: var(--panel) !important;
+    color: var(--ink-soft) !important;
+    font-size: 10px !important;
+  }
+  .leaflet-control-attribution a { color: var(--accent) !important; }
+  .leaflet-control-zoom a {
+    background: var(--panel) !important;
+    color: var(--ink) !important;
+    border: 1px solid var(--border) !important;
+  }
+  .leaflet-control-zoom a:hover {
+    background: var(--accent) !important;
+    color: #fbf5e6 !important;
+  }
+  html.dark .leaflet-control-zoom a:hover { color: #0c1821 !important; }
+
+  /* Plot / "charting" overlay on map */
+  .charting {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1500;
+    background: var(--toast-bg);
+    color: var(--toast-ink);
+    padding: 14px 22px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    box-shadow: var(--shadow);
+    display: none;
+    align-items: center;
+    gap: 10px;
+  }
+  .charting.show { display: flex; }
+  .charting .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--gold);
+    animation: blink 0.8s infinite;
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  @media (max-width: 500px) {
+    .control-panel {
+      top: 10px;
+      right: 10px;
+      left: 10px;
+      min-width: 0;
+      padding: 12px;
+    }
+    .panel-title { font-size: 17px; }
+    .stat-val { font-size: 18px; }
+    .loader-title { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<!-- Loader -->
+<div class="loader" id="loader">
+  <svg class="compass-big" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.5">
+    <circle cx="50" cy="50" r="44"></circle>
+    <circle cx="50" cy="50" r="3" fill="currentColor"></circle>
+    <polygon points="50,12 55,50 50,88 45,50" fill="currentColor" stroke="none"></polygon>
+    <line x1="50" y1="4" x2="50" y2="14"></line>
+    <line x1="50" y1="86" x2="50" y2="96"></line>
+    <line x1="4" y1="50" x2="14" y2="50"></line>
+    <line x1="86" y1="50" x2="96" y2="50"></line>
+  </svg>
+  <div class="loader-title">Mariner's Atlas</div>
+  <div class="loader-text" id="loaderText">Loading sea charts…</div>
+</div>
+
+<!-- Control Panel -->
+<aside class="control-panel" aria-label="Route control panel">
+  <div class="panel-header">
+    <svg class="compass" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.5">
+      <circle cx="50" cy="50" r="44"></circle>
+      <circle cx="50" cy="50" r="3" fill="currentColor"></circle>
+      <polygon points="50,12 55,50 50,88 45,50" fill="currentColor" stroke="none"></polygon>
+      <line x1="50" y1="4" x2="50" y2="14"></line>
+      <line x1="50" y1="86" x2="50" y2="96"></line>
+      <line x1="4" y1="50" x2="14" y2="50"></line>
+      <line x1="86" y1="50" x2="96" y2="50"></line>
+    </svg>
+    <div>
+      <div class="panel-title">Mariner's Atlas</div>
+      <div class="panel-subtitle">Route Cartographer</div>
+    </div>
+  </div>
+
+  <button class="btn" id="drawRouteBtn" disabled="">
+    <i class="fa-solid fa-route"></i>
+    <span id="drawRouteLabel">Draw Route</span>
+  </button>
+  <button class="btn btn-danger" id="clearMapBtn">
+    <i class="fa-solid fa-eraser"></i>
+    Clear Map
+  </button>
+
+  <div class="panel-section">
+    <div class="panel-section-label">Navigator Tools</div>
+    <button class="btn" id="findPortBtn">
+      <i class="fa-solid fa-magnifying-glass-location"></i>
+      Find Port
+    </button>
+    <button class="btn" id="measureBtn">
+      <i class="fa-solid fa-ruler"></i>
+      <span id="measureLabel">Measure Distance</span>
+    </button>
+  </div>
+
+  <div class="panel-section">
+    <div class="panel-section-label">Logbook</div>
+    <button class="btn" id="exportPngBtn">
+      <i class="fa-solid fa-image"></i>
+      Export PNG
+    </button>
+    <button class="btn" id="exportJsonBtn">
+      <i class="fa-solid fa-file-export"></i>
+      Export JSON
+    </button>
+    <button class="btn" id="importJsonBtn">
+      <i class="fa-solid fa-file-import"></i>
+      Import JSON
+    </button>
+    <input type="file" id="jsonFileInput" accept=".json,application/json">
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-val" id="portCount">0</div>
+      <div class="stat-lbl">Ports</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="routeCount">0</div>
+      <div class="stat-lbl">Routes</div>
+    </div>
+  </div>
+
+  <div class="chart-state" id="chartState">Preparing charts…</div>
+
+  <div class="panel-section" style="margin-top:8px; padding-top:8px;">
+    <button class="btn" id="helpBtn" style="margin:0;">
+      <i class="fa-solid fa-circle-question"></i>
+      Help &amp; FAQ
+    </button>
+  </div>
+</aside>
+
+<div class="charting" id="charting">
+  <div class="dot"></div>
+  <span>Plotting sea route…</span>
+</div>
+
+<!-- Hint toast -->
+<div class="hint" id="hint">
+  <i class="fa-solid fa-anchor"></i>
+  <span id="hintText"></span>
+</div>
+
+<!-- Name input modal -->
+<div class="modal-backdrop" id="nameModal">
+  <div class="modal">
+    <h3>Name this Port</h3>
+    <div class="modal-sub">Lat <span id="modalLat">—</span> • Lng <span id="modalLng">—</span></div>
+    <input id="portNameInput" type="text" placeholder="e.g. Port of Lisbon" autocomplete="off">
+    <div class="modal-actions">
+      <button class="btn" id="modalCancel" style="background:transparent; color:var(--ink-soft);">
+        <i class="fa-solid fa-xmark"></i> Cancel
+      </button>
+      <button class="btn" id="modalSave">
+        <i class="fa-solid fa-anchor"></i> Anchor
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Port details modal -->
+<div class="modal-backdrop" id="portModal">
+  <div class="modal" style="min-width: 360px;">
+    <h3 id="portModalTitle">Port Details</h3>
+    <div class="modal-sub" id="portModalSub">—</div>
+
+    <span class="field-label">Port Name</span>
+    <input id="portEditName" type="text" autocomplete="off">
+
+    <span class="field-label">Notes &amp; Cargo</span>
+    <textarea id="portEditDetails" placeholder="Logbook notes, cargo manifest, weather, hazards…"></textarea>
+
+    <div class="check-row" id="bubbleToggleRow">
+      <input type="checkbox" id="bubbleToggle">
+      <label for="bubbleToggle">Display info bubble on map</label>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="portDeleteBtn" style="margin-right:auto;">
+        <i class="fa-solid fa-trash"></i> Delete Port
+      </button>
+      <button class="btn" id="portCancelBtn" style="background:transparent; color:var(--ink-soft);">
+        <i class="fa-solid fa-xmark"></i> Cancel
+      </button>
+      <button class="btn" id="portSaveBtn">
+        <i class="fa-solid fa-floppy-disk"></i> Save
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Export options modal -->
+<div class="modal-backdrop" id="exportModal">
+  <div class="modal">
+    <h3 id="exportModalTitle">Preparing Export…</h3>
+    <div class="modal-sub" id="exportModalSub">Please hold.</div>
+  </div>
+</div>
+
+<!-- Route choice modal -->
+<div class="modal-backdrop" id="routeChoiceModal">
+  <div class="modal">
+    <h3>Choose Your Course</h3>
+    <div class="modal-sub" id="routeChoiceSub">Two viable sea routes detected.</div>
+    <div class="route-choices" id="routeChoices"></div>
+    <div class="modal-actions">
+      <button class="btn" id="routeChoiceCancel" style="background:transparent; color:var(--ink-soft);">
+        <i class="fa-solid fa-xmark"></i> Abandon
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Port search modal -->
+<div class="modal-backdrop" id="searchModal">
+  <div class="modal" style="min-width: 360px; max-width: 520px;">
+    <h3>Find a Port</h3>
+    <div class="modal-sub">Jump directly to a named harbor in the atlas</div>
+    <input id="portSearchInput" type="text" placeholder="Search by port name or notes" autocomplete="off">
+    <div class="search-results" id="portSearchResults"></div>
+    <div class="modal-actions">
+      <button class="btn" id="searchCloseBtn" style="background:transparent; color:var(--ink-soft);">
+        <i class="fa-solid fa-xmark"></i> Close
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Help/FAQ modal -->
+<div class="modal-backdrop" id="helpModal">
+  <div class="modal" style="max-width: 600px;">
+    <h3>Mariner's Atlas — Guide</h3>
+    <div class="modal-sub">Quick reference for navigating the atlas</div>
+
+    <div style="margin-top: 20px; max-height: 60vh; overflow-y: auto; padding-right: 8px;">
+      <div class="help-section">
+        <div class="help-title"><i class="fa-solid fa-anchor"></i> Adding Ports</div>
+        <div class="help-text">
+          • Click anywhere on the map to anchor a new port<br>
+          • Enter a name in the dialog (or leave blank for auto-numbering)<br>
+          • Ports display with permanent labels showing their names<br>
+          • Click any port to edit its details, add notes, or delete it
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-title"><i class="fa-solid fa-route"></i> Drawing Sea Routes</div>
+        <div class="help-text">
+          • Wait for "Sea charts loaded" to appear in the control panel<br>
+          • Click the <strong>Draw Route</strong> button<br>
+          • Click two ports to chart a maritime route between them<br>
+          • The app uses A* pathfinding to plot realistic sea routes that avoid land masses and navigate through straits (Panama, Suez, Gibraltar, etc.)<br>
+          • If two significantly different routes exist, you'll be prompted to choose your preferred course<br>
+          • Routes show distance in km and nautical miles when clicked
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-title"><i class="fa-solid fa-note-sticky"></i> Port Info Bubbles</div>
+        <div class="help-text">
+          • Click any port to open its details<br>
+          • Add notes in the "Notes &amp; Cargo" field (cargo manifest, hazards, weather, etc.)<br>
+          • Check <strong>"Display info bubble on map"</strong> to show a callout<br>
+          • The bubble appears as a draggable speech balloon connected to the port<br>
+          • <strong>Drag the bubble</strong> to reposition it anywhere on the map<br>
+          • Uncheck the box and save to hide the bubble
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-title"><i class="fa-solid fa-compass-drafting"></i> Navigator Tools</div>
+        <div class="help-text">
+          • Click <strong>Find Port</strong> to search by port name or saved notes<br>
+          • Selecting a match jumps the map to that port and briefly highlights it<br>
+          • Click <strong>Measure Distance</strong> to start the straight-line ruler<br>
+          • Click any two points on the map to measure great-circle distance in km and nautical miles<br>
+          • Measurements are visual aids only and are not included in JSON exports
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-title"><i class="fa-solid fa-image"></i> Exporting as PNG</div>
+        <div class="help-text">
+          • Click <strong>Export PNG</strong> in the Logbook section<br>
+          • The map is captured without UI controls, showing only ports, labels, routes, and info bubbles<br>
+          • The PNG is saved with a timestamp: <code>mariners-atlas-YYYY-MM-DD...</code><br>
+          • High-resolution output suitable for printing or sharing
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-title"><i class="fa-solid fa-file-export"></i> Exporting as JSON</div>
+        <div class="help-text">
+          • Click <strong>Export JSON</strong> to save your entire atlas<br>
+          • The JSON file includes all ports (names, coordinates, notes, bubble positions), all routes (exact paths, distances), and the current map view<br>
+          • Save this file to back up your work or share it with others<br>
+          • Filename format: <code>mariners-atlas-YYYY-MM-DD...</code>
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-title"><i class="fa-solid fa-file-import"></i> Importing from JSON</div>
+        <div class="help-text">
+          • Click <strong>Import JSON</strong> and select a previously exported atlas file<br>
+          • The current map will be cleared and replaced with the imported data<br>
+          • All ports, routes, notes, and bubble positions are restored exactly as saved<br>
+          • The camera view (zoom and center) is also restored<br>
+          • Use this to continue working on a saved atlas or load someone else's routes
+        </div>
+      </div>
+
+      <div class="help-section">
+        <div class="help-title"><i class="fa-solid fa-lightbulb"></i> Tips</div>
+        <div class="help-text">
+          • Routes use real maritime pathfinding — expect ships to navigate around continents and through major canals<br>
+          • Press <strong>Esc</strong> to close any open modal<br>
+          • Press <strong>Esc</strong> while drawing or measuring to cancel the active tool<br>
+          • Deleting a port also removes any routes connected to it<br>
+          • Info bubbles stay anchored to their ports when dragged — perfect for annotation workflows<br>
+          • Light/dark mode follows your system preference automatically
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" id="helpCloseBtn" style="width:100%;">
+        <i class="fa-solid fa-xmark"></i> Close
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm modal -->
+<div class="modal-backdrop" id="confirmModal">
+  <div class="modal">
+    <h3>Clear the Atlas?</h3>
+    <div class="modal-sub">This removes all ports and routes.</div>
+    <div class="modal-actions">
+      <button class="btn" id="confirmCancel" style="background:transparent; color:var(--ink-soft);">
+        <i class="fa-solid fa-xmark"></i> Keep
+      </button>
+      <button class="btn btn-danger" id="confirmOk">
+        <i class="fa-solid fa-trash"></i> Clear
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/topojson-client@3/dist/topojson-client.min.js"></script>
+<script>
+  /* ===== Dark mode ===== */
+  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.documentElement.classList.add('dark');
+  }
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    document.documentElement.classList.toggle('dark', e.matches);
+  });
+
+  /* ===== Map ===== */
+  const map = L.map('map', { zoomControl: true, worldCopyJump: true }).setView([25, -30], 3);
+  L.tileLayer(
+    'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png',
+    {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd',
+      maxZoom: 19,
+      crossOrigin: 'anonymous'
+    }
+  ).addTo(map);
+
+  /* ===== State ===== */
+  const markers = [];   // {id, marker, name, latlng}
+  const routes = [];    // layer groups
+  let drawMode = false;
+  let selectedForRoute = [];
+  let nextId = 1;
+  let seaReady = false;
+
+  /* ===== DOM ===== */
+  const drawBtn = document.getElementById('drawRouteBtn');
+  const drawLabel = document.getElementById('drawRouteLabel');
+  const clearBtn = document.getElementById('clearMapBtn');
+  const hintEl = document.getElementById('hint');
+  const hintText = document.getElementById('hintText');
+  const portCountEl = document.getElementById('portCount');
+  const routeCountEl = document.getElementById('routeCount');
+  const chartState = document.getElementById('chartState');
+  const loader = document.getElementById('loader');
+  const loaderText = document.getElementById('loaderText');
+  const charting = document.getElementById('charting');
+  const findPortBtn = document.getElementById('findPortBtn');
+  const measureBtn = document.getElementById('measureBtn');
+  const measureLabel = document.getElementById('measureLabel');
+
+  const nameModal = document.getElementById('nameModal');
+  const portNameInput = document.getElementById('portNameInput');
+  const modalLat = document.getElementById('modalLat');
+  const modalLng = document.getElementById('modalLng');
+  const modalSave = document.getElementById('modalSave');
+  const modalCancel = document.getElementById('modalCancel');
+
+  const routeChoiceModal = document.getElementById('routeChoiceModal');
+  const routeChoices = document.getElementById('routeChoices');
+  const routeChoiceSub = document.getElementById('routeChoiceSub');
+  const routeChoiceCancel = document.getElementById('routeChoiceCancel');
+
+  const searchModal = document.getElementById('searchModal');
+  const portSearchInput = document.getElementById('portSearchInput');
+  const portSearchResults = document.getElementById('portSearchResults');
+  const searchCloseBtn = document.getElementById('searchCloseBtn');
+
+  const confirmModal = document.getElementById('confirmModal');
+  const confirmOk = document.getElementById('confirmOk');
+  const confirmCancel = document.getElementById('confirmCancel');
+
+  let pendingLatLng = null;
+  let isPlottingRoute = false;
+  let measureMode = false;
+  let measureStartLatLng = null;
+  let measurePreviewLayer = null;
+  let measurementLayer = null;
+  let measurementMeta = null;
+  let routeChoiceState = null;
+
+  function updateStats() {
+    portCountEl.textContent = markers.length;
+    routeCountEl.textContent = routes.length;
+  }
+
+  let hintTimer = null;
+  function showHint(text, sticky = false) {
+    hintText.textContent = text;
+    hintEl.classList.add('visible');
+    if (hintTimer) clearTimeout(hintTimer);
+    if (!sticky) hintTimer = setTimeout(() => hintEl.classList.remove('visible'), 2800);
+  }
+  function hideHint() {
+    hintEl.classList.remove('visible');
+    if (hintTimer) clearTimeout(hintTimer);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+
+  function syncActionState() {
+    const routeChoiceOpen = routeChoiceModal.classList.contains('show');
+    drawBtn.disabled = !seaReady || isPlottingRoute || routeChoiceOpen;
+    findPortBtn.disabled = isPlottingRoute || routeChoiceOpen;
+    measureBtn.disabled = isPlottingRoute || routeChoiceOpen;
+  }
+
+  /* ===== Ports ===== */
+  function makeIcon() {
+    return L.divIcon({
+      className: 'port-marker',
+      html: '<div class="port-marker-inner"><i class="fa-solid fa-anchor"></i></div>',
+      iconSize: [28, 28],
+      iconAnchor: [14, 28],
+      popupAnchor: [0, -28]
+    });
+  }
+
+  function openNameModal(latlng) {
+    pendingLatLng = latlng;
+    modalLat.textContent = latlng.lat.toFixed(3);
+    modalLng.textContent = latlng.lng.toFixed(3);
+    portNameInput.value = '';
+    nameModal.classList.add('show');
+    setTimeout(() => portNameInput.focus(), 60);
+  }
+  function closeNameModal() {
+    nameModal.classList.remove('show');
+    pendingLatLng = null;
+  }
+  function savePort() {
+    if (!pendingLatLng) return;
+    const name = (portNameInput.value || '').trim() || `Port ${nextId}`;
+    addMarker(pendingLatLng, name);
+    closeNameModal();
+  }
+
+  function addMarker(latlng, name, opts) {
+    opts = opts || {};
+    const id = opts.id || nextId++;
+    if (id >= nextId) nextId = id + 1;
+    const marker = L.marker(latlng, { icon: makeIcon() }).addTo(map);
+    // Permanent label
+    marker.bindTooltip(name, {
+      permanent: true,
+      direction: 'right',
+      offset: [10, -14],
+      className: 'port-label'
+    });
+
+    const entry = {
+      id, marker, name,
+      latlng: L.latLng(latlng.lat, latlng.lng),
+      details: opts.details || '',
+      bubbleVisible: false,
+      bubbleLatLng: opts.bubbleLatLng ? L.latLng(opts.bubbleLatLng.lat, opts.bubbleLatLng.lng) : null,
+      bubble: null,
+      bubbleLine: null
+    };
+    marker.on('click', (ev) => {
+      L.DomEvent.stopPropagation(ev);
+      if (drawMode) handleRouteSelection(entry);
+      else if (measureMode) handleMeasurePoint(entry.latlng);
+      else openPortModal(entry);
+    });
+    markers.push(entry);
+    if (opts.bubbleVisible) showBubble(entry);
+    updateStats();
+    refreshMarkerVisuals();
+    return entry;
+  }
+
+  function findPort(id) { return markers.find(m => m.id === id); }
+
+  /* ===== Port detail modal ===== */
+  const portModal = document.getElementById('portModal');
+  const portModalTitle = document.getElementById('portModalTitle');
+  const portModalSub = document.getElementById('portModalSub');
+  const portEditName = document.getElementById('portEditName');
+  const portEditDetails = document.getElementById('portEditDetails');
+  const bubbleToggle = document.getElementById('bubbleToggle');
+  const portSaveBtn = document.getElementById('portSaveBtn');
+  const portCancelBtn = document.getElementById('portCancelBtn');
+  const portDeleteBtn = document.getElementById('portDeleteBtn');
+  let editingPort = null;
+
+  function openPortModal(entry) {
+    editingPort = entry;
+    portModalTitle.textContent = entry.name;
+    portModalSub.textContent = `${entry.latlng.lat.toFixed(3)}° • ${entry.latlng.lng.toFixed(3)}°`;
+    portEditName.value = entry.name;
+    portEditDetails.value = entry.details || '';
+    bubbleToggle.checked = !!entry.bubbleVisible;
+    portModal.classList.add('show');
+    setTimeout(() => portEditName.focus(), 60);
+  }
+
+  function closePortModal() {
+    portModal.classList.remove('show');
+    editingPort = null;
+  }
+
+  function savePortEdits() {
+    if (!editingPort) return;
+    const newName = (portEditName.value || '').trim() || editingPort.name;
+    const newDetails = portEditDetails.value || '';
+    const wantBubble = bubbleToggle.checked;
+
+    const renamed = newName !== editingPort.name;
+    editingPort.name = newName;
+    editingPort.details = newDetails;
+
+    if (renamed) {
+      editingPort.marker.unbindTooltip();
+      editingPort.marker.bindTooltip(newName, {
+        permanent: true, direction: 'right', offset: [10, -14], className: 'port-label'
+      });
+    }
+
+    if (wantBubble) {
+      if (!editingPort.bubbleVisible) showBubble(editingPort);
+      else updateBubbleContent(editingPort);
+    } else if (editingPort.bubbleVisible) {
+      hideBubble(editingPort);
+    }
+
+    closePortModal();
+    showHint(`Port "${newName}" updated.`);
+  }
+
+  function deletePortEntry(entry) {
+    // Remove routes involving this port
+    for (let i = routes.length - 1; i >= 0; i--) {
+      const r = routes[i];
+      if (r.fromId === entry.id || r.toId === entry.id) {
+        map.removeLayer(r.layer);
+        routes.splice(i, 1);
+      }
+    }
+    hideBubble(entry);
+    map.removeLayer(entry.marker);
+    const idx = markers.indexOf(entry);
+    if (idx !== -1) markers.splice(idx, 1);
+    updateStats();
+  }
+
+  /* ===== Info bubble ===== */
+  function defaultBubbleLatLng(portLatLng) {
+    const bounds = map.getBounds();
+    const latSpan = Math.max(0.3, (bounds.getNorth() - bounds.getSouth()) * 0.12);
+    const lngSpan = Math.max(0.3, (bounds.getEast() - bounds.getWest()) * 0.12);
+    return L.latLng(portLatLng.lat + latSpan, portLatLng.lng + lngSpan);
+  }
+
+  function makeBubbleIcon(name, details) {
+    const safeDetails = escapeHtml(details || '').trim() || '<em style="opacity:.6">No details yet</em>';
+    return L.divIcon({
+      className: 'bubble-marker',
+      html: `<div class="info-bubble">
+               <div class="bubble-title">${escapeHtml(name)}</div>
+               <div class="bubble-handle"><i class="fa-solid fa-up-down-left-right"></i></div>
+               <div class="bubble-body">${safeDetails}</div>
+             </div>`,
+      iconSize: null,
+      iconAnchor: [0, 0]
+    });
+  }
+
+  function showBubble(entry) {
+    if (entry.bubble) return;
+    if (!entry.bubbleLatLng) entry.bubbleLatLng = defaultBubbleLatLng(entry.latlng);
+    entry.bubbleVisible = true;
+
+    const bubble = L.marker(entry.bubbleLatLng, {
+      icon: makeBubbleIcon(entry.name, entry.details),
+      draggable: true,
+      autoPan: false,
+      zIndexOffset: 500
+    }).addTo(map);
+
+    bubble.on('drag', () => {
+      entry.bubbleLatLng = bubble.getLatLng();
+    });
+    bubble.on('click', (ev) => { L.DomEvent.stopPropagation(ev); });
+
+    entry.bubble = bubble;
+    entry.bubbleLine = null;
+  }
+
+  function updateBubbleContent(entry) {
+    if (!entry.bubble) return;
+    entry.bubble.setIcon(makeBubbleIcon(entry.name, entry.details));
+  }
+
+  function hideBubble(entry) {
+    entry.bubbleVisible = false;
+    if (entry.bubble) {
+      map.removeLayer(entry.bubble);
+      entry.bubble = null;
+    }
+    entry.bubbleLine = null;
+  }
+
+  portSaveBtn.addEventListener('click', savePortEdits);
+  portCancelBtn.addEventListener('click', closePortModal);
+  portDeleteBtn.addEventListener('click', () => {
+    if (!editingPort) return;
+    const ent = editingPort;
+    closePortModal();
+    deletePortEntry(ent);
+    showHint('Port removed.');
+  });
+  portModal.addEventListener('click', (e) => { if (e.target === portModal) closePortModal(); });
+  portEditName.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); portEditDetails.focus(); }
+    else if (e.key === 'Escape') { closePortModal(); }
+  });
+  portEditDetails.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { closePortModal(); }
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (portModal.classList.contains('show')) closePortModal();
+    else if (routeChoiceModal.classList.contains('show')) closeRouteChoice();
+    else if (searchModal.classList.contains('show')) closeSearchModal();
+    else if (confirmModal.classList.contains('show')) confirmModal.classList.remove('show');
+    else if (helpModal.classList.contains('show')) helpModal.classList.remove('show');
+    else if (measureMode) setMeasureMode(false);
+    else if (drawMode) setDrawMode(false);
+  });
+
+  /* ===== Help/FAQ ===== */
+  const helpBtn = document.getElementById('helpBtn');
+  const helpModal = document.getElementById('helpModal');
+  const helpCloseBtn = document.getElementById('helpCloseBtn');
+
+  helpBtn.addEventListener('click', () => helpModal.classList.add('show'));
+  helpCloseBtn.addEventListener('click', () => helpModal.classList.remove('show'));
+  helpModal.addEventListener('click', (e) => {
+    if (e.target === helpModal) helpModal.classList.remove('show');
+  });
+
+  function refreshMarkerVisuals() {
+    markers.forEach(m => {
+      const el = m.marker.getElement();
+      if (!el) return;
+      el.classList.toggle('selectable', drawMode);
+      el.classList.toggle('selected', selectedForRoute.some(s => s.id === m.id));
+    });
+  }
+
+  function flashPort(entry) {
+    const el = entry.marker.getElement();
+    if (!el) return;
+    el.classList.remove('search-hit');
+    void el.offsetWidth;
+    el.classList.add('search-hit');
+    setTimeout(() => el.classList.remove('search-hit'), 1300);
+  }
+
+  /* ===== Port search ===== */
+  function renderSearchResults(query) {
+    const q = (query || '').trim().toLowerCase();
+    const matches = markers
+      .filter(m => !q || m.name.toLowerCase().includes(q) || (m.details || '').toLowerCase().includes(q))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    portSearchResults.innerHTML = '';
+    if (!matches.length) {
+      portSearchResults.innerHTML = '<div class="search-empty">No matching ports in the current atlas.</div>';
+      return;
+    }
+
+    matches.forEach(entry => {
+      const btn = document.createElement('button');
+      btn.className = 'search-result';
+      const notes = (entry.details || '').trim();
+      btn.innerHTML = `
+        <div class="search-result-name">${escapeHtml(entry.name)}</div>
+        <div class="search-result-meta">${entry.latlng.lat.toFixed(3)}° • ${entry.latlng.lng.toFixed(3)}°</div>
+        ${notes ? `<div class="search-result-notes">${escapeHtml(notes.slice(0, 96))}${notes.length > 96 ? '…' : ''}</div>` : ''}
+      `;
+      btn.addEventListener('click', () => {
+        closeSearchModal();
+        map.flyTo(entry.latlng, Math.max(map.getZoom(), 5), { animate: true, duration: 0.7 });
+        flashPort(entry);
+        showHint(`Centered on ${entry.name}.`);
+      });
+      portSearchResults.appendChild(btn);
+    });
+  }
+
+  function openSearchModal() {
+    setDrawMode(false);
+    setMeasureMode(false);
+    portSearchInput.value = '';
+    renderSearchResults('');
+    searchModal.classList.add('show');
+    setTimeout(() => portSearchInput.focus(), 60);
+  }
+
+  function closeSearchModal() {
+    searchModal.classList.remove('show');
+  }
+
+  findPortBtn.addEventListener('click', openSearchModal);
+  searchCloseBtn.addEventListener('click', closeSearchModal);
+  portSearchInput.addEventListener('input', () => renderSearchResults(portSearchInput.value));
+  portSearchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeSearchModal();
+    else if (e.key === 'Enter') {
+      e.preventDefault();
+      const first = portSearchResults.querySelector('.search-result');
+      if (first) first.click();
+    }
+  });
+  searchModal.addEventListener('click', (e) => {
+    if (e.target === searchModal) closeSearchModal();
+  });
+
+  /* ===== Sea grid (land/sea mask) =====
+     We rasterize world land polygons (TopoJSON) into a grid, then run A*
+     on sea cells. Longitude wraps around the antimeridian. */
+  const GRID_W = 720;
+  const GRID_H = 360;
+  const isLand = new Uint8Array(GRID_W * GRID_H);
+
+  function idx(x, y) { return y * GRID_W + x; }
+  function latLngToCell(lat, lng) {
+    // Normalize lng to [-180,180)
+    let l = ((lng + 180) % 360 + 360) % 360 - 180;
+    const x = Math.floor((l + 180) / 360 * GRID_W);
+    const y = Math.floor((90 - lat) / 180 * GRID_H);
+    return [
+      Math.max(0, Math.min(GRID_W - 1, x)),
+      Math.max(0, Math.min(GRID_H - 1, y))
+    ];
+  }
+  function cellToLatLng(x, y) {
+    const lng = (x + 0.5) / GRID_W * 360 - 180;
+    const lat = 90 - (y + 0.5) / GRID_H * 180;
+    return [lat, lng];
+  }
+
+  async function buildSeaGrid() {
+    loaderText.textContent = 'Fetching coastlines…';
+    const resp = await fetch('https://unpkg.com/world-atlas@2/land-110m.json');
+    const topo = await resp.json();
+    loaderText.textContent = 'Rasterizing land…';
+    const land = topojson.feature(topo, topo.objects.land);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = GRID_W;
+    canvas.height = GRID_H;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, GRID_W, GRID_H);
+    ctx.fillStyle = '#ffffff';
+
+    function drawPoly(rings) {
+      ctx.beginPath();
+      rings.forEach(ring => {
+        ring.forEach((pt, i) => {
+          const x = (pt[0] + 180) / 360 * GRID_W;
+          const y = (90 - pt[1]) / 180 * GRID_H;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.closePath();
+      });
+      ctx.fill('evenodd');
+    }
+
+    land.features.forEach(f => {
+      const g = f.geometry;
+      if (!g) return;
+      if (g.type === 'Polygon') drawPoly(g.coordinates);
+      else if (g.type === 'MultiPolygon') g.coordinates.forEach(drawPoly);
+    });
+
+    const data = ctx.getImageData(0, 0, GRID_W, GRID_H).data;
+    for (let i = 0, n = GRID_W * GRID_H; i < n; i++) {
+      isLand[i] = data[i * 4] > 128 ? 1 : 0;
+    }
+
+    // Carve canals & narrow straits that simplified 110m land omits
+    carveCanal(9.35, -79.92, 9.10, -79.55, 1);   // Panama
+    carveCanal(30.55, 32.33, 29.95, 32.58, 1);   // Suez
+    carveCanal(41.25, 28.95, 41.04, 29.10, 1);   // Bosphorus
+    carveCanal(40.20, 26.15, 40.45, 26.70, 1);   // Dardanelles
+    carveCanal(35.95, -5.50, 35.95, -5.25, 1);   // Gibraltar (safety)
+    carveCanal(12.60, 43.35, 12.65, 43.85, 1);   // Bab-el-Mandeb
+    carveCanal(26.55, 56.25, 26.55, 56.75, 1);   // Hormuz
+    carveCanal( 1.20, 103.30,  1.30, 104.10, 1); // Singapore/Malacca south
+    carveCanal(55.60, 12.50, 55.80, 12.90, 1);   // Øresund
+    loaderText.textContent = 'Charts ready.';
+  }
+
+  function carveCanal(lat1, lng1, lat2, lng2, width) {
+    const [x1, y1] = latLngToCell(lat1, lng1);
+    const [x2, y2] = latLngToCell(lat2, lng2);
+    const steps = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1), 1);
+    for (let t = 0; t <= steps; t++) {
+      const x = Math.round(x1 + (x2 - x1) * t / steps);
+      const y = Math.round(y1 + (y2 - y1) * t / steps);
+      for (let dy = -width; dy <= width; dy++) {
+        for (let dx = -width; dx <= width; dx++) {
+          const ny = y + dy;
+          if (ny < 0 || ny >= GRID_H) continue;
+          const nx = ((x + dx) % GRID_W + GRID_W) % GRID_W;
+          isLand[idx(nx, ny)] = 0;
+        }
+      }
+    }
+  }
+
+  /* ===== A* with longitude wrap ===== */
+  class MinHeap {
+    constructor() { this.data = []; }
+    size() { return this.data.length; }
+    push(item) {
+      this.data.push(item);
+      this._up(this.data.length - 1);
+    }
+    pop() {
+      const top = this.data[0];
+      const last = this.data.pop();
+      if (this.data.length) { this.data[0] = last; this._down(0); }
+      return top;
+    }
+    _up(i) {
+      const d = this.data;
+      while (i > 0) {
+        const p = (i - 1) >> 1;
+        if (d[p].f <= d[i].f) break;
+        [d[i], d[p]] = [d[p], d[i]];
+        i = p;
+      }
+    }
+    _down(i) {
+      const d = this.data, n = d.length;
+      while (true) {
+        const l = 2 * i + 1, r = l + 1;
+        let s = i;
+        if (l < n && d[l].f < d[s].f) s = l;
+        if (r < n && d[r].f < d[s].f) s = r;
+        if (s === i) break;
+        [d[i], d[s]] = [d[s], d[i]];
+        i = s;
+      }
+    }
+  }
+
+  const DIRS = [
+    [1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1],
+    [1, 1, Math.SQRT2], [-1, 1, Math.SQRT2],
+    [1, -1, Math.SQRT2], [-1, -1, Math.SQRT2]
+  ];
+
+  function heuristic(ax, ay, bx, by) {
+    const dy = Math.abs(ay - by);
+    let dx = Math.abs(ax - bx);
+    dx = Math.min(dx, GRID_W - dx);
+    return Math.hypot(dx, dy);
+  }
+
+  function nearestSea(x, y, maxRadius = 12) {
+    if (!isLand[idx(x, y)]) return [x, y];
+    // Spiral-ish BFS over a bounded radius
+    const visited = new Uint8Array(GRID_W * GRID_H);
+    visited[idx(x, y)] = 1;
+    const queue = [[x, y, 0]];
+    let head = 0;
+    while (head < queue.length) {
+      const [cx, cy, d] = queue[head++];
+      if (d > maxRadius) break;
+      if (!isLand[idx(cx, cy)]) return [cx, cy];
+      for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+        let nx = cx + dx, ny = cy + dy;
+        if (ny < 0 || ny >= GRID_H) continue;
+        nx = (nx + GRID_W) % GRID_W;
+        const k = idx(nx, ny);
+        if (visited[k]) continue;
+        visited[k] = 1;
+        queue.push([nx, ny, d + 1]);
+      }
+    }
+    return null;
+  }
+
+  function astar(startX, startY, goalX, goalY, penalty) {
+    const N = GRID_W * GRID_H;
+    const g = new Float32Array(N);
+    for (let i = 0; i < N; i++) g[i] = Infinity;
+    const came = new Int32Array(N);
+    for (let i = 0; i < N; i++) came[i] = -1;
+    const closed = new Uint8Array(N);
+
+    const startI = idx(startX, startY);
+    const goalI = idx(goalX, goalY);
+    g[startI] = 0;
+
+    const heap = new MinHeap();
+    heap.push({ f: heuristic(startX, startY, goalX, goalY), i: startI });
+
+    while (heap.size()) {
+      const cur = heap.pop();
+      if (closed[cur.i]) continue;
+      closed[cur.i] = 1;
+      if (cur.i === goalI) break;
+      const cx = cur.i % GRID_W;
+      const cy = (cur.i - cx) / GRID_W;
+      for (const [dx, dy, cost] of DIRS) {
+        let nx = cx + dx, ny = cy + dy;
+        if (ny < 0 || ny >= GRID_H) continue;
+        nx = (nx + GRID_W) % GRID_W;
+        const ni = idx(nx, ny);
+        if (isLand[ni] || closed[ni]) continue;
+        // Disallow diagonal squeezing between land corners
+        if (dx && dy) {
+          if (isLand[idx((cx + dx + GRID_W) % GRID_W, cy)] &&
+              isLand[idx(cx, cy + dy)]) continue;
+        }
+        const extra = penalty ? penalty[ni] : 0;
+        const t = g[cur.i] + cost + extra;
+        if (t < g[ni]) {
+          g[ni] = t;
+          came[ni] = cur.i;
+          heap.push({ f: t + heuristic(nx, ny, goalX, goalY), i: ni });
+        }
+      }
+    }
+
+    if (came[goalI] === -1 && startI !== goalI) return null;
+    const path = [];
+    let c = goalI;
+    let guard = 0;
+    while (c !== -1 && guard++ < N) {
+      path.unshift(c);
+      if (c === startI) break;
+      c = came[c];
+    }
+    return path;
+  }
+
+  /* ===== Path helpers ===== */
+  function cellsToLatLngs(cells, hintLng) {
+    // Unwrap longitudes continuously so Leaflet draws correctly across antimeridian
+    const out = [];
+    let prevLng = hintLng;
+    for (const ci of cells) {
+      const cx = ci % GRID_W;
+      const cy = (ci - cx) / GRID_W;
+      let [lat, lng] = cellToLatLng(cx, cy);
+      if (prevLng !== null && prevLng !== undefined) {
+        while (lng - prevLng > 180) lng -= 360;
+        while (lng - prevLng < -180) lng += 360;
+      }
+      out.push([lat, lng]);
+      prevLng = lng;
+    }
+    return out;
+  }
+
+  // Douglas-Peucker simplification for smoother lines
+  function simplify(points, tol = 0.5) {
+    if (points.length < 3) return points.slice();
+    const sqTol = tol * tol;
+    const keep = new Uint8Array(points.length);
+    keep[0] = 1; keep[points.length - 1] = 1;
+    const stack = [[0, points.length - 1]];
+    while (stack.length) {
+      const [a, b] = stack.pop();
+      let maxD = 0, maxI = -1;
+      const [ax, ay] = points[a], [bx, by] = points[b];
+      const dx = bx - ax, dy = by - ay;
+      const denom = dx*dx + dy*dy || 1;
+      for (let i = a + 1; i < b; i++) {
+        const [px, py] = points[i];
+        const t = ((px - ax) * dx + (py - ay) * dy) / denom;
+        const cx = ax + t * dx, cy = ay + t * dy;
+        const ddx = px - cx, ddy = py - cy;
+        const d = ddx*ddx + ddy*ddy;
+        if (d > maxD) { maxD = d; maxI = i; }
+      }
+      if (maxD > sqTol && maxI !== -1) {
+        keep[maxI] = 1;
+        stack.push([a, maxI], [maxI, b]);
+      }
+    }
+    const out = [];
+    for (let i = 0; i < points.length; i++) if (keep[i]) out.push(points[i]);
+    return out;
+  }
+
+  function pathLengthKm(latlngs) {
+    let sum = 0;
+    for (let i = 1; i < latlngs.length; i++) {
+      sum += haversine({ lat: latlngs[i-1][0], lng: latlngs[i-1][1] },
+                       { lat: latlngs[i][0],   lng: latlngs[i][1] });
+    }
+    return sum;
+  }
+
+  function haversine(a, b) {
+    const R = 6371;
+    const toRad = v => v * Math.PI / 180;
+    const dLat = toRad(b.lat - a.lat);
+    const dLng = toRad(b.lng - a.lng);
+    const lat1 = toRad(a.lat), lat2 = toRad(b.lat);
+    const h = Math.sin(dLat/2)**2 + Math.sin(dLng/2)**2 * Math.cos(lat1) * Math.cos(lat2);
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+
+  /* ===== Alternative-path search =====
+     Run A* a second time with a penalty corridor around the first path.
+     If the new path is significantly different, offer it as a choice. */
+  function findAlternative(start, goal, primaryCells) {
+    const penalty = new Float32Array(GRID_W * GRID_H);
+    const radius = 4;
+    for (const ci of primaryCells) {
+      const cx = ci % GRID_W;
+      const cy = (ci - cx) / GRID_W;
+      for (let dy = -radius; dy <= radius; dy++) {
+        for (let dx = -radius; dx <= radius; dx++) {
+          const ny = cy + dy;
+          if (ny < 0 || ny >= GRID_H) continue;
+          const nx = ((cx + dx) % GRID_W + GRID_W) % GRID_W;
+          const d2 = dx*dx + dy*dy;
+          if (d2 > radius*radius) continue;
+          penalty[idx(nx, ny)] += 20 * (1 - Math.sqrt(d2)/(radius + 0.001));
+        }
+      }
+    }
+    return astar(start[0], start[1], goal[0], goal[1], penalty);
+  }
+
+  function cellOverlap(a, b) {
+    const setA = new Set(a);
+    let overlap = 0;
+    for (const c of b) if (setA.has(c)) overlap++;
+    return overlap / Math.min(a.length, b.length);
+  }
+
+  /* ===== Route plotting ===== */
+  async function plotRoute(portA, portB) {
+    if (isPlottingRoute) {
+      showHint('A route is already being charted.');
+      return;
+    }
+    isPlottingRoute = true;
+    syncActionState();
+    charting.classList.add('show');
+    // Yield so UI updates
+    await new Promise(r => setTimeout(r, 30));
+    try {
+      let [sx, sy] = latLngToCell(portA.latlng.lat, portA.latlng.lng);
+      let [gx, gy] = latLngToCell(portB.latlng.lat, portB.latlng.lng);
+      const startSnap = nearestSea(sx, sy, 15);
+      const goalSnap = nearestSea(gx, gy, 15);
+
+      if (!startSnap || !goalSnap) {
+        showHint('Unable to reach open sea from one of the ports.');
+        return;
+      }
+      [sx, sy] = startSnap;
+      [gx, gy] = goalSnap;
+
+      const primaryCells = astar(sx, sy, gx, gy);
+      if (!primaryCells) {
+        showHint('No sea route found between these ports.');
+        return;
+      }
+
+      const primaryLL = cellsToLatLngs(primaryCells, portA.latlng.lng);
+      // Splice in actual port locations at each end for pretty anchoring
+      const primaryFull = [[portA.latlng.lat, portA.latlng.lng], ...primaryLL, [portB.latlng.lat, portB.latlng.lng]];
+      const primarySimpl = simplify(primaryFull, 0.4);
+      const primaryKm = pathLengthKm(primarySimpl);
+
+      // Search alternative
+      const altCells = findAlternative([sx, sy], [gx, gy], primaryCells);
+      let altSimpl = null, altKm = null;
+      if (altCells) {
+        const overlap = cellOverlap(primaryCells, altCells);
+        const altLL = cellsToLatLngs(altCells, portA.latlng.lng);
+        const altFull = [[portA.latlng.lat, portA.latlng.lng], ...altLL, [portB.latlng.lat, portB.latlng.lng]];
+        const candidate = simplify(altFull, 0.4);
+        const candidateKm = pathLengthKm(candidate);
+        // Only offer if routes differ meaningfully and alt isn't absurdly longer
+        if (overlap < 0.75 && candidateKm < primaryKm * 2.2) {
+          altSimpl = candidate;
+          altKm = candidateKm;
+        }
+      }
+
+      if (altSimpl) {
+        offerRouteChoice(portA, portB, primarySimpl, primaryKm, altSimpl, altKm);
+      } else {
+        commitRoute(portA, portB, primarySimpl, primaryKm, 'primary');
+      }
+    } finally {
+      charting.classList.remove('show');
+      isPlottingRoute = false;
+      syncActionState();
+    }
+  }
+
+  /* ===== Route layers ===== */
+  function drawRouteLayer(latlngs, style = 'primary', preview = false) {
+    const color = style === 'primary'
+      ? getComputedStyle(document.documentElement).getPropertyValue('--route-color').trim()
+      : getComputedStyle(document.documentElement).getPropertyValue('--route-alt-color').trim();
+
+    const halo = L.polyline(latlngs, {
+      color, weight: preview ? 10 : 8, opacity: preview ? 0.25 : 0.18, lineCap: 'round'
+    });
+    const line = L.polyline(latlngs, {
+      color, weight: preview ? 3 : 2.5, opacity: 0.95,
+      dashArray: '8, 10', lineCap: 'round'
+    });
+    return L.layerGroup([halo, line]);
+  }
+
+  function offerRouteChoice(portA, portB, primLL, primKm, altLL, altKm) {
+    closeRouteChoice({ silent: true });
+    // Show both as previews on map
+    const primPreview = drawRouteLayer(primLL, 'primary', true).addTo(map);
+    const altPreview  = drawRouteLayer(altLL,  'alt',     true).addTo(map);
+    map.fitBounds(primPreview.getLayers()[0].getBounds().extend(altPreview.getLayers()[0].getBounds()), { padding: [60, 60] });
+
+    routeChoiceSub.textContent = `Two viable sea routes from ${portA.name} to ${portB.name}.`;
+    routeChoices.innerHTML = '';
+
+    const makeCard = (label, km, color, variant, latlngs) => {
+      const btn = document.createElement('button');
+      btn.className = 'route-card';
+      btn.innerHTML = `
+        <div class="swatch" style="background:${color}"></div>
+        <div>
+          <div class="route-title">${label}</div>
+          <div class="route-dist">${Math.round(km).toLocaleString()} km • ${Math.round(km/1.852).toLocaleString()} nmi</div>
+        </div>
+      `;
+      btn.addEventListener('click', () => {
+        closeRouteChoice({ silent: true });
+        commitRoute(portA, portB, latlngs, km, variant);
+      });
+      return btn;
+    };
+
+    const primColor = getComputedStyle(document.documentElement).getPropertyValue('--route-color').trim();
+    const altColor = getComputedStyle(document.documentElement).getPropertyValue('--route-alt-color').trim();
+    const primLabel = primKm <= altKm ? 'Route A — Shortest' : 'Route A';
+    const altLabel  = altKm  <  primKm ? 'Route B — Shortest' : 'Route B — Scenic';
+
+    routeChoices.appendChild(makeCard(primLabel, primKm, primColor, 'primary', primLL));
+    routeChoices.appendChild(makeCard(altLabel, altKm, altColor, 'alt', altLL));
+
+    routeChoiceState = { primPreview, altPreview };
+    routeChoiceModal.classList.add('show');
+    syncActionState();
+  }
+
+  function closeRouteChoice(opts) {
+    const { silent = false } = opts || {};
+    if (routeChoiceState) {
+      map.removeLayer(routeChoiceState.primPreview);
+      map.removeLayer(routeChoiceState.altPreview);
+      routeChoiceState = null;
+    }
+    routeChoiceModal.classList.remove('show');
+    routeChoices.innerHTML = '';
+    syncActionState();
+    if (!silent) showHint('Route selection cancelled.');
+  }
+
+  routeChoiceCancel.addEventListener('click', () => closeRouteChoice());
+  routeChoiceModal.addEventListener('click', (e) => {
+    if (e.target === routeChoiceModal) closeRouteChoice();
+  });
+
+  function commitRoute(portA, portB, latlngs, km, variant) {
+    const group = drawRouteLayer(latlngs, variant).addTo(map);
+    const nm = Math.round(km / 1.852);
+    group.eachLayer(l => {
+      l.bindPopup(`
+        <div class="port-popup">
+          <strong>${escapeHtml(portA.name)} → ${escapeHtml(portB.name)}</strong>
+          <div class="coord">${Math.round(km).toLocaleString()} km • ${nm.toLocaleString()} nautical mi • ${variant === 'primary' ? 'Primary' : 'Alternative'}</div>
+        </div>
+      `);
+    });
+    routes.push({ layer: group, fromId: portA.id, toId: portB.id, variant, km, latlngs });
+    updateStats();
+    showHint(`Route charted: ${portA.name} → ${portB.name} (${nm.toLocaleString()} nmi)`);
+  }
+
+  /* ===== Draw mode interaction ===== */
+  function handleRouteSelection(entry) {
+    if (isPlottingRoute || routeChoiceModal.classList.contains('show')) return;
+    if (selectedForRoute.some(s => s.id === entry.id)) {
+      selectedForRoute = selectedForRoute.filter(s => s.id !== entry.id);
+      refreshMarkerVisuals();
+      showHint('Port deselected. Choose a port to continue.');
+      return;
+    }
+    selectedForRoute.push(entry);
+    refreshMarkerVisuals();
+    if (selectedForRoute.length === 1) {
+      showHint(`Origin: ${entry.name}. Select destination…`, true);
+    } else if (selectedForRoute.length === 2) {
+      const [a, b] = selectedForRoute;
+      selectedForRoute = [];
+      setDrawMode(false);
+      plotRoute(a, b);
+    }
+  }
+
+  function setDrawMode(on) {
+    if (on && !seaReady) {
+      showHint('Sea charts still loading…');
+      return;
+    }
+    if (on && (isPlottingRoute || routeChoiceModal.classList.contains('show'))) {
+      showHint('Finish the current route choice first.');
+      return;
+    }
+    if (on) setMeasureMode(false);
+    drawMode = on;
+    drawBtn.classList.toggle('active', on);
+    drawLabel.textContent = on ? 'Cancel Route' : 'Draw Route';
+    if (!on) {
+      selectedForRoute = [];
+      hideHint();
+    } else {
+      if (markers.length < 2) {
+        showHint('Place at least two ports first.');
+        drawMode = false;
+        drawBtn.classList.remove('active');
+        drawLabel.textContent = 'Draw Route';
+        return;
+      }
+      showHint('Click two ports to chart a sea route.', true);
+    }
+    refreshMarkerVisuals();
+  }
+
+  /* ===== Distance ruler ===== */
+  function clearMeasurePreview() {
+    if (measurePreviewLayer) {
+      map.removeLayer(measurePreviewLayer);
+      measurePreviewLayer = null;
+    }
+    measureStartLatLng = null;
+    map.off('mousemove', updateMeasurePreview);
+  }
+
+  function clearMeasurement() {
+    if (measurementLayer) {
+      map.removeLayer(measurementLayer);
+      measurementLayer = null;
+      measurementMeta = null;
+    }
+  }
+
+  function updateMeasurePreview(ev) {
+    if (!measurePreviewLayer || !measureStartLatLng) return;
+    const layers = measurePreviewLayer.getLayers();
+    layers[1].setLatLngs([measureStartLatLng, ev.latlng]);
+  }
+
+  function setMeasureMode(on, opts) {
+    const { preserveHint = false } = opts || {};
+    if (on && (isPlottingRoute || routeChoiceModal.classList.contains('show'))) {
+      showHint('Finish the current route choice first.');
+      return;
+    }
+    if (on) setDrawMode(false);
+    measureMode = on;
+    measureBtn.classList.toggle('btn-tool-active', on);
+    measureLabel.textContent = on ? 'Cancel Measure' : 'Measure Distance';
+    if (!on) {
+      clearMeasurePreview();
+      if (!preserveHint) hideHint();
+    } else {
+      showHint('Click two points to measure a straight-line distance.', true);
+    }
+  }
+
+  function commitMeasurement(a, b) {
+    clearMeasurement();
+    const km = haversine(a, b);
+    const nm = Math.round(km / 1.852);
+    const color = getComputedStyle(document.documentElement).getPropertyValue('--gold').trim();
+    const halo = L.polyline([a, b], {
+      color,
+      weight: 8,
+      opacity: 0.16,
+      lineCap: 'round'
+    });
+    const line = L.polyline([a, b], {
+      color,
+      weight: 2.5,
+      opacity: 0.95,
+      dashArray: '6, 8',
+      lineCap: 'round'
+    });
+    const start = L.circleMarker(a, {
+      radius: 5,
+      color,
+      weight: 2,
+      fillColor: getComputedStyle(document.documentElement).getPropertyValue('--panel').trim(),
+      fillOpacity: 1
+    });
+    const end = L.circleMarker(b, {
+      radius: 5,
+      color,
+      weight: 2,
+      fillColor: getComputedStyle(document.documentElement).getPropertyValue('--panel').trim(),
+      fillOpacity: 1
+    });
+    measurementLayer = L.layerGroup([halo, line, start, end]).addTo(map);
+    measurementMeta = { km, nm, start: [a.lat, a.lng], end: [b.lat, b.lng] };
+    line.bindPopup(`
+      <div class="port-popup">
+        <strong>Straight-Line Measure</strong>
+        <div class="coord">${Math.round(km).toLocaleString()} km • ${nm.toLocaleString()} nautical mi</div>
+      </div>
+    `).openPopup();
+    showHint(`Measured ${nm.toLocaleString()} nmi straight-line distance.`);
+  }
+
+  function handleMeasurePoint(latlng) {
+    if (!measureMode) return;
+    if (!measureStartLatLng) {
+      clearMeasurePreview();
+      measureStartLatLng = L.latLng(latlng.lat, latlng.lng);
+      const color = getComputedStyle(document.documentElement).getPropertyValue('--gold').trim();
+      const start = L.circleMarker(measureStartLatLng, {
+        radius: 5,
+        color,
+        weight: 2,
+        fillColor: getComputedStyle(document.documentElement).getPropertyValue('--panel').trim(),
+        fillOpacity: 1
+      });
+      const line = L.polyline([measureStartLatLng, measureStartLatLng], {
+        color,
+        weight: 2,
+        opacity: 0.8,
+        dashArray: '6, 8'
+      });
+      measurePreviewLayer = L.layerGroup([start, line]).addTo(map);
+      map.on('mousemove', updateMeasurePreview);
+      showHint('First point set. Click a second point to finish measuring.', true);
+      return;
+    }
+
+    const start = L.latLng(measureStartLatLng.lat, measureStartLatLng.lng);
+    const end = L.latLng(latlng.lat, latlng.lng);
+    clearMeasurePreview();
+    commitMeasurement(start, end);
+    setMeasureMode(false, { preserveHint: true });
+  }
+
+  measureBtn.addEventListener('click', () => setMeasureMode(!measureMode));
+
+  /* ===== Events ===== */
+  map.on('click', (e) => {
+    if (drawMode) return;
+    if (measureMode) {
+      handleMeasurePoint(e.latlng);
+      return;
+    }
+    openNameModal(e.latlng);
+  });
+
+  drawBtn.addEventListener('click', () => setDrawMode(!drawMode));
+
+  clearBtn.addEventListener('click', () => {
+    if (markers.length === 0 && routes.length === 0 && !measurementLayer) {
+      showHint('The atlas is already empty.');
+      return;
+    }
+    confirmModal.classList.add('show');
+  });
+  confirmCancel.addEventListener('click', () => confirmModal.classList.remove('show'));
+  confirmOk.addEventListener('click', () => {
+    clearAll();
+    confirmModal.classList.remove('show');
+    showHint('Atlas cleared.');
+  });
+
+  function clearAll() {
+    closeRouteChoice({ silent: true });
+    closeSearchModal();
+    markers.forEach(m => {
+      hideBubble(m);
+      map.removeLayer(m.marker);
+    });
+    routes.forEach(r => map.removeLayer(r.layer));
+    markers.length = 0;
+    routes.length = 0;
+    selectedForRoute = [];
+    nextId = 1;
+    clearMeasurePreview();
+    clearMeasurement();
+    setDrawMode(false);
+    setMeasureMode(false);
+    updateStats();
+  }
+
+  modalSave.addEventListener('click', savePort);
+  modalCancel.addEventListener('click', closeNameModal);
+  portNameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); savePort(); }
+    else if (e.key === 'Escape') { closeNameModal(); }
+  });
+  nameModal.addEventListener('click', (e) => { if (e.target === nameModal) closeNameModal(); });
+  confirmModal.addEventListener('click', (e) => { if (e.target === confirmModal) confirmModal.classList.remove('show'); });
+
+  /* ===== Export / Import ===== */
+  const exportPngBtn = document.getElementById('exportPngBtn');
+  const exportJsonBtn = document.getElementById('exportJsonBtn');
+  const importJsonBtn = document.getElementById('importJsonBtn');
+  const jsonFileInput = document.getElementById('jsonFileInput');
+  const exportModal = document.getElementById('exportModal');
+  const exportModalTitle = document.getElementById('exportModalTitle');
+  const exportModalSub = document.getElementById('exportModalSub');
+
+  function openExportModal(title, sub) {
+    exportModalTitle.textContent = title;
+    exportModalSub.textContent = sub;
+    exportModal.classList.add('show');
+  }
+  function closeExportModal() { exportModal.classList.remove('show'); }
+
+  function triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 400);
+  }
+
+  async function exportPNG() {
+    if (typeof html2canvas === 'undefined') {
+      showHint('Export library unavailable.');
+      return;
+    }
+    openExportModal('Rendering map…', 'Capturing the atlas as PNG.');
+
+    // Close any open popups
+    map.closePopup();
+
+    document.body.classList.add('exporting');
+
+    // Give the browser a tick to apply style changes
+    await new Promise(r => setTimeout(r, 150));
+
+    try {
+      const canvas = await html2canvas(document.getElementById('map'), {
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#ffffff',
+        logging: false,
+        scale: Math.min(2, window.devicePixelRatio || 1)
+      });
+
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+          triggerDownload(blob, `mariners-atlas-${ts}.png`);
+          showHint('Map exported as PNG.');
+        } else {
+          showHint('PNG export failed.');
+        }
+        closeExportModal();
+      }, 'image/png');
+    } catch (err) {
+      console.error('PNG export error', err);
+      showHint('PNG export failed — check console.');
+      closeExportModal();
+    } finally {
+      document.body.classList.remove('exporting');
+    }
+  }
+
+  function exportJSON() {
+    const state = {
+      format: 'mariners-atlas',
+      version: 1,
+      exported: new Date().toISOString(),
+      view: {
+        center: [map.getCenter().lat, map.getCenter().lng],
+        zoom: map.getZoom()
+      },
+      ports: markers.map(m => ({
+        id: m.id,
+        name: m.name,
+        lat: m.latlng.lat,
+        lng: m.latlng.lng,
+        details: m.details || '',
+        bubbleVisible: !!m.bubbleVisible,
+        bubbleLat: m.bubbleLatLng ? m.bubbleLatLng.lat : null,
+        bubbleLng: m.bubbleLatLng ? m.bubbleLatLng.lng : null
+      })),
+      routes: routes.map(r => ({
+        fromId: r.fromId,
+        toId: r.toId,
+        variant: r.variant,
+        km: r.km,
+        latlngs: r.latlngs
+      }))
+    };
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    triggerDownload(blob, `mariners-atlas-${ts}.json`);
+    showHint('Atlas exported as JSON.');
+  }
+
+  async function importJSONFile(file) {
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (!data || data.format !== 'mariners-atlas' || !Array.isArray(data.ports)) {
+        showHint('Invalid atlas JSON file.');
+        return;
+      }
+
+      clearAll();
+
+      // Restore ports
+      const idMap = {};
+      (data.ports || []).forEach(p => {
+        const latlng = L.latLng(p.lat, p.lng);
+        const entry = addMarker(latlng, p.name || 'Port', {
+          id: p.id,
+          details: p.details || '',
+          bubbleVisible: !!p.bubbleVisible,
+          bubbleLatLng: (p.bubbleLat != null && p.bubbleLng != null)
+            ? { lat: p.bubbleLat, lng: p.bubbleLng } : null
+        });
+        idMap[p.id] = entry;
+      });
+
+      // Restore routes
+      (data.routes || []).forEach(r => {
+        const a = idMap[r.fromId], b = idMap[r.toId];
+        if (!a || !b) return;
+        const latlngs = r.latlngs || [[a.latlng.lat, a.latlng.lng], [b.latlng.lat, b.latlng.lng]];
+        const km = r.km != null ? r.km : pathLengthKm(latlngs);
+        commitRoute(a, b, latlngs, km, r.variant || 'primary');
+      });
+
+      // Restore view
+      if (data.view && Array.isArray(data.view.center)) {
+        map.setView(data.view.center, data.view.zoom || map.getZoom());
+      }
+
+      showHint(`Atlas imported — ${markers.length} ports, ${routes.length} routes.`);
+    } catch (err) {
+      console.error('Import failed', err);
+      showHint('Import failed — invalid JSON.');
+    }
+  }
+
+  exportPngBtn.addEventListener('click', exportPNG);
+  exportJsonBtn.addEventListener('click', exportJSON);
+  importJsonBtn.addEventListener('click', () => jsonFileInput.click());
+  jsonFileInput.addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) importJSONFile(file);
+    jsonFileInput.value = '';
+  });
+
+  /* ===== Init ===== */
+  buildSeaGrid()
+    .then(() => {
+      seaReady = true;
+      chartState.textContent = 'Sea charts loaded';
+      chartState.classList.add('ready');
+      syncActionState();
+      setTimeout(() => {
+        loader.classList.add('hidden');
+        setTimeout(() => loader.remove(), 500);
+      }, 250);
+      setTimeout(() => showHint('Click the map to anchor a port.'), 800);
+    })
+    .catch(err => {
+      console.error('Failed to load sea charts', err);
+      chartState.textContent = 'Charts failed to load';
+      loaderText.textContent = 'Failed to load sea charts. Check connection.';
+      syncActionState();
+    });
+
+  updateStats();
+  syncActionState();
+</script>
+
+
+
+</body></html>

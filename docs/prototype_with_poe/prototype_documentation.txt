@@ -1,0 +1,687 @@
+Mariner's Atlas — Technical Specification Document
+Historical note:
+This file describes the earlier prototype, not the current root app.
+For the live application in this repository, use:
+- README.md
+- docs/CURRENT_APP_DOCUMENTATION.md
+- docs/IMPLEMENTATION_BACKLOG.md
+
+Project Overview
+Mariner's Atlas is a single-file web application for creating interactive maritime route maps. Users can place ports, chart realistic sea routes using A* pathfinding that avoids land masses, annotate ports with draggable info bubbles, and export their work as PNG images or JSON files for backup/sharing.
+
+Key Capabilities:
+
+Interactive map with clickable port placement
+Realistic maritime route calculation using A* pathfinding on a rasterized land/sea grid
+Draggable annotation callout bubbles attached to ports
+Port search and jump-to-location workflow
+Straight-line distance ruler with km and nautical mile readouts
+PNG export (map only, no UI controls)
+JSON export/import for full state persistence
+Responsive design with light/dark mode support
+Technical Stack
+Core Libraries (Loaded from CDN)
+Library	Version	CDN URL	Purpose
+Leaflet.js	1.9.4	unpkg.com/leaflet@1.9.4/dist/leaflet.js	Interactive map rendering, tile management, marker/polyline layers
+TopoJSON Client	3.x	unpkg.com/topojson-client@3/dist/topojson-client.min.js	Decoding TopoJSON world land data into GeoJSON features
+html2canvas	1.4.1	cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js	PNG export by rendering DOM to canvas
+Font Awesome	6.4.0	cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css	UI icons
+Google Fonts	-	fonts.googleapis.com	Typography: Cormorant Garamond (serif), JetBrains Mono (monospace)
+External Data Sources
+Resource	URL	Purpose
+World Land TopoJSON	unpkg.com/world-atlas@2/land-110m.json	110m-simplified world land polygons for sea/land rasterization
+Map Tiles	basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png	CartoDB Voyager base layer (country/ocean labels, clean aesthetic)
+File Structure
+Single HTML File Architecture
+
+less
+index.html (1900+ lines)
+├── <head>
+│   ├── External CSS (Leaflet, Font Awesome, Google Fonts)
+│   ├── External JS (html2canvas)
+│   └── Embedded <style> block (~600 lines of CSS)
+├── <body>
+│   ├── Map container (#map)
+│   ├── Loader overlay (compass spinner + status text)
+│   ├── Control panel (buttons, stats, state indicator)
+│   ├── Charting overlay (A* progress indicator)
+│   ├── Hint toast (user feedback)
+│   ├── Modals:
+│   │   ├── Name port modal
+│   │   ├── Port details modal (edit name, notes, bubble toggle, delete)
+│   │   ├── Route choice modal (alternative route picker)
+│   │   ├── Port search modal
+│   │   ├── Export progress modal
+│   │   ├── Confirm clear modal
+│   │   └── Help/FAQ modal
+│   ├── Hidden file input (JSON import)
+│   └── Embedded <script> block (~1200 lines of JavaScript)
+
+Architecture & Code Organization
+JavaScript Structure
+Initialization Flow:
+
+Dark mode detection (prefers-color-scheme)
+Leaflet map initialization (center: [25, -30], zoom: 3)
+Tile layer with crossOrigin: 'anonymous' for PNG export compatibility
+buildSeaGrid() async function:
+Fetches TopoJSON land data
+Rasterizes to 720×360 pixel grid (0.5° resolution)
+Manually carves canals (Panama, Suez, Bosphorus, etc.)
+Sets seaReady = true, enables "Draw Route" button
+Event listener attachment
+Initial hint display
+Global State:
+
+javascript
+const markers = [];  // Array of port objects
+const routes = [];   // Array of route objects with layer references
+let drawMode = false;
+let selectedForRoute = [];  // Ports selected during route drawing
+let nextId = 1;      // Auto-incrementing port ID
+let seaReady = false;
+const isLand = new Uint8Array(GRID_W * GRID_H);  // Sea/land bitmap
+
+Data Structures
+Port Object:
+
+javascript
+{
+  id: Number,              // Unique identifier
+  marker: L.Marker,        // Leaflet marker instance
+  name: String,            // Port name
+  latlng: L.LatLng,        // Coordinates
+  details: String,         // User notes/cargo text
+  bubbleVisible: Boolean,  // Whether info bubble is shown
+  bubbleLatLng: L.LatLng,  // Bubble position (or null)
+  bubble: L.Marker,        // Bubble marker instance (or null)
+  bubbleLine: null         // Legacy field (no longer used)
+}
+
+Route Object:
+
+javascript
+{
+  layer: L.LayerGroup,     // Contains halo + line polylines
+  fromId: Number,          // Origin port ID
+  toId: Number,            // Destination port ID
+  variant: String,         // 'primary' or 'alt'
+  km: Number,              // Route distance in kilometers
+  latlngs: [[lat,lng],...]  // Full polyline coordinates
+}
+
+JSON Export Schema:
+
+json
+{
+  "format": "mariners-atlas",
+  "version": 1,
+  "exported": "ISO 8601 timestamp",
+  "view": {
+    "center": [lat, lng],
+    "zoom": Number
+  },
+  "ports": [
+    {
+      "id": Number,
+      "name": String,
+      "lat": Number,
+      "lng": Number,
+      "details": String,
+      "bubbleVisible": Boolean,
+      "bubbleLat": Number | null,
+      "bubbleLng": Number | null
+    }
+  ],
+  "routes": [
+    {
+      "fromId": Number,
+      "toId": Number,
+      "variant": String,
+      "km": Number,
+      "latlngs": [[lat, lng], ...]
+    }
+  ]
+}
+
+Core Components
+1. Sea Routing Engine
+Algorithm: A Pathfinding with Longitude Wraparound*
+
+Grid Setup:
+
+Resolution: 720 columns × 360 rows (0.5° per cell)
+Coordinate mapping: latLngToCell(lat, lng) → grid cell [x, y]
+Reverse mapping: cellToLatLng(x, y) → [lat, lng]
+Longitude wraparound: x = (x + GRID_W) % GRID_W for antimeridian crossing
+Rasterization Process:
+
+Fetch TopoJSON land data from unpkg (110m simplified)
+Convert to GeoJSON using topojson.feature()
+Draw polygons to a 720×360 canvas using canvas.fillStyle
+Read pixel data: white = land, black = sea
+Store in Uint8Array isLand[720×360]
+Manually carve canals with carveCanal() function:
+Panama Canal (9.35°N, -79.92°W to 9.10°N, -79.55°W)
+Suez Canal (30.55°N, 32.33°E to 29.95°N, 32.58°E)
+Bosphorus, Dardanelles, Gibraltar, Bab-el-Mandeb, Hormuz, Malacca, Øresund
+A Implementation:*
+
+javascript
+function astar(startX, startY, goalX, goalY, penaltyMap)
+
+Data structures:
+MinHeap (custom binary heap for priority queue)
+Float32Array g[GRID_W * GRID_H] (cost-to-reach)
+Int32Array came[GRID_W * GRID_H] (parent tracking)
+Uint8Array closed[GRID_W * GRID_H] (visited set)
+Movement: 8-directional (cardinal + diagonal)
+Cost: 1 for cardinal, √2 for diagonal
+Diagonal blocking: prevents squeezing between land corners
+Heuristic: Euclidean distance with longitude wraparound
+Penalty map: Optional Float32Array for alternative route search
+Returns: Array of cell indices forming the path (or null if no route)
+Port Snapping:
+
+javascript
+function nearestSea(x, y, maxRadius = 12)
+
+Ports near coastlines may land on rasterized land pixels
+BFS spiral search (max 12-cell radius) to find nearest sea cell
+If unreachable, route drawing fails with error hint
+Alternative Route Detection:
+
+javascript
+function findAlternative(start, goal, primaryCells)
+
+Runs second A* with penalty corridor around primary path
+Penalty: 20 * (1 - distance_from_primary / radius) within 4-cell radius
+Comparison: If cellOverlap < 0.75 and altKm < primaryKm * 2.2, offer choice
+User selects via modal with distance labels
+Path Simplification:
+
+Douglas-Peucker algorithm with tolerance 0.4° (reduces polyline vertices)
+Smooths jaggy grid-based paths
+Longitude Unwrapping:
+
+javascript
+function cellsToLatLngs(cells, hintLng)
+
+Converts cell path to lat/lng coordinates
+Continuously adjusts longitude to avoid 180° jumps (for Pacific routes)
+Allows polylines to extend beyond [-180, 180] range
+Leaflet's worldCopyJump handles rendering across antimeridian
+2. Port Management
+Placement:
+
+Click empty map area → openNameModal(latlng)
+User enters name (or leaves blank for auto-numbering: "Port 1", "Port 2", etc.)
+addMarker(latlng, name, opts) creates:
+Custom divIcon with teardrop anchor shape + FontAwesome anchor icon
+Permanent tooltip (Leaflet permanent: true) displaying port name
+Click handler: draw mode → route selection | normal mode → port details modal
+Details Modal:
+
+Fields:
+Port name (editable text input)
+Notes & Cargo (textarea, freeform text)
+"Display info bubble on map" (checkbox)
+Actions:
+Save: updates port object, refreshes tooltip if renamed, shows/hides/updates bubble
+Delete: removes port marker, bubble, and any routes involving this port ID
+Cancel: closes modal without changes
+Keyboard shortcuts: Enter (in name field) → focus textarea | Esc → close modal
+Deletion Cascade:
+
+javascript
+function deletePortEntry(entry)
+
+Iterates routes[] array backwards
+Removes any route where fromId === entry.id || toId === entry.id
+Removes marker, bubble, and bubble line from map
+Splices port from markers[] array
+3. Info Bubble System
+Visual Design:
+
+Speech balloon callout with triangular pointer (CSS ::before / ::after)
+Pointer: 12px triangle at bottom-left corner, pointing toward port
+Pointer border: Outlined with ::after pseudo-element (1px offset)
+Backdrop blur + shadow for depth
+Max width: 260px, min width: 140px
+Bubble Structure:
+
+javascript
+function makeBubbleIcon(name, details)
+
+Returns Leaflet divIcon with HTML:
+
+html
+<div class="info-bubble">
+  <div class="bubble-title">{PORT_NAME}</div>
+  <div class="bubble-handle">
+    <i class="fa-solid fa-up-down-left-right"></i>
+  </div>
+  <div class="bubble-body">{DETAILS_TEXT}</div>
+</div>
+
+Dragging Behavior:
+
+Leaflet marker with draggable: true
+On drag event: updates entry.bubbleLatLng with new position
+No leader line (removed in latest version; visual pointer suffices)
+Bubble click: stopPropagation() to prevent map click-through
+Positioning:
+
+javascript
+function defaultBubbleLatLng(portLatLng)
+
+Initial placement: 12% of visible map extent northeast of port
+User can drag to any position; position persists in JSON export
+4. Route Drawing
+User Flow:
+
+Click "Draw Route" button → setDrawMode(true)
+Port markers pulse with animation, hint displays "Click two ports to chart a sea route"
+Click first port → selectedForRoute.push(portA), hint updates "Select destination"
+Click second port → plotRoute(portA, portB) starts
+"Plotting sea route…" overlay appears
+A* runs asynchronously (with setTimeout to yield to UI)
+If alternative exists and differs significantly → route choice modal
+User picks route → commitRoute() draws polyline, exits draw mode
+Visual Styling:
+
+Halo layer: 8px weight, 18% opacity (glow effect)
+Line layer: 2.5px weight, 95% opacity, dashed (dashArray: '8, 10')
+Colors:
+Primary: --route-color (navy in light mode, cyan in dark mode)
+Alternative: --route-alt-color (terracotta in light mode, orange in dark mode)
+Popup: Shows port names, distance in km + nautical miles, variant label
+Route Choice Modal:
+
+Displays both routes as previews on map (slightly thicker, lower opacity)
+Two cards with color swatches, "Route A — Shortest" / "Route B — Scenic" labels
+Distance in km + nmi
+Click card → commits chosen route, removes preview, closes modal
+5. Export System
+PNG Export:
+
+javascript
+async function exportPNG()
+
+Adds .exporting class to <body> (hides control panel, modals, Leaflet controls)
+Waits 150ms for style changes to apply
+Calls html2canvas(document.getElementById('map'), {useCORS: true, ...})
+Tile layer has crossOrigin: 'anonymous' to allow canvas rendering
+Converts canvas to PNG blob
+Triggers download via temporary <a download> element
+Filename: mariners-atlas-YYYY-MM-DDTHH-MM-SS.png
+Removes .exporting class, restores UI
+Known Limitations:
+
+Requires CORS-enabled tile server (CartoDB Voyager supports this)
+Leaflet permanent tooltips (port labels) render as DOM elements and are captured
+Info bubbles (also DOM-based Leaflet markers) are captured
+Scale: up to 2× device pixel ratio for high-DPI displays
+JSON Export:
+
+javascript
+function exportJSON()
+
+Serializes full state to JSON (see schema above)
+Includes current map view (center lat/lng, zoom level)
+Stores exact route polylines (no need to re-run A* on import)
+Filename: mariners-atlas-YYYY-MM-DDTHH-MM-SS.json
+JSON Import:
+
+javascript
+async function importJSONFile(file)
+
+Parses JSON, validates format === 'mariners-atlas'
+Calls clearAll() to remove existing ports/routes
+Iterates data.ports[], calls addMarker() with original IDs
+Recreates bubbles if bubbleVisible === true with saved bubbleLatLng
+Iterates data.routes[], calls commitRoute() with stored polylines
+Restores camera view with map.setView()
+Shows hint with import summary
+6. Navigator Tools
+Port Search:
+
+javascript
+function renderSearchResults(query)
+
+Filters ports by name or notes text
+Displays modal list of matches with coordinates and note preview
+Selecting a result closes the modal, flies the map to that port, and briefly highlights its marker
+Distance Ruler:
+
+javascript
+function setMeasureMode(on)
+function commitMeasurement(a, b)
+
+Tool toggles from the control panel as "Measure Distance"
+User clicks two points anywhere on the map to measure great-circle distance
+Preview line follows the cursor after the first click
+Committed measurement renders a dashed gold line, endpoint markers, and popup with km + nautical miles
+Measurements are session-only helpers and are not exported to JSON
+UI/UX Components
+Control Panel
+Location: Top-right, floating parchment-styled card
+
+Sections:
+
+Header: Compass SVG (rotating animation) + "Mariner's Atlas" title
+Action Buttons:
+Draw Route (toggles to "Cancel Route" when active)
+Clear Map (opens confirmation modal)
+Navigator Tools:
+Find Port
+Measure Distance
+Logbook Section:
+Export PNG
+Export JSON
+Import JSON (triggers hidden file input)
+Stats:
+Port count
+Route count
+Chart State: "Preparing charts…" → "Sea charts loaded" (green accent when ready)
+Help & FAQ Button: Opens comprehensive guide modal
+Responsive: Collapses to full-width on narrow screens (<500px), smaller text
+
+Modals
+All modals share:
+
+Backdrop: rgba(12, 24, 33, 0.6) + backdrop-filter: blur(3px)
+Parchment panel with lined-paper background (subtle horizontal grid lines)
+Fade-in + slide-up animation
+Click outside or press Esc to close
+Modal Types:
+
+Name Port: Simple text input + Lat/Lng display
+Port Details: Name input, textarea, checkbox, Save/Delete/Cancel buttons
+Route Choice: Two route cards with swatches, distances, labels
+Port Search: Search input + matching port cards
+Export Progress: Title + subtitle, no interactions (auto-closes)
+Confirm Clear: Warning + Keep/Clear buttons
+Help/FAQ: Scrollable content area with 8 sections (icons + descriptions)
+Hint Toast
+Bottom-center, semi-transparent dark background
+JetBrains Mono uppercase text
+Auto-dismisses after 2.8 seconds (or sticky for important messages)
+Icon: gold anchor
+Charting Overlay
+Center of map, shows during A* computation
+Pulsing dot + "Plotting sea route…" text
+Prevents confusion during long pathfinding operations
+Loader Screen
+Full-screen, fades out when buildSeaGrid() completes
+Large rotating compass SVG
+Status text: "Loading sea charts…" → "Fetching coastlines…" → "Rasterizing land…" → "Charts ready."
+CSS Architecture
+Design System
+Color Variables (CSS Custom Properties):
+
+css
+:root {
+  /* Light mode palette */
+  --bg: #f4ecd8;           /* Parchment cream */
+  --panel: #fbf5e6;        /* Lighter parchment */
+  --ink: #2b1b0f;          /* Dark brown text */
+  --ink-soft: #5c4433;     /* Muted brown */
+  --accent: #8b2e1f;       /* Terracotta red */
+  --route-color: #1a4a6e;  /* Navy blue (primary route) */
+  --route-alt-color: #8b2e1f; /* Terracotta (alt route) */
+  --border: rgba(43, 27, 15, 0.25);
+  --shadow: 0 10px 30px rgba(43, 27, 15, 0.25);
+}
+
+html.dark {
+  /* Dark mode palette - inverted contrast */
+  --bg: #0c1821;           /* Deep navy */
+  --panel: #132838;        /* Slate blue */
+  --ink: #e8dcc4;          /* Cream text */
+  --accent: #d4a95a;       /* Gold */
+  --route-color: #5cc2e0;  /* Cyan */
+  --route-alt-color: #e89865; /* Peach */
+  /* ... other overrides */
+}
+
+Typography Scale:
+
+Headings: Cormorant Garamond, 700 weight, uppercase, letter-spacing 1.4-2.5px
+Body/Bubbles: Cormorant Garamond, 400 weight, 15-16px, line-height 1.35-1.6
+UI Labels: JetBrains Mono, 600 weight, 8-11px, uppercase, letter-spacing 1.5-2.5px
+Monospace Data: JetBrains Mono, 400 weight (coordinates, distances, filenames)
+Animation Principles:
+
+Subtle, purposeful motion (rotating compass, pulsing markers, fade-in modals)
+No animation on permanent port labels (always visible for reference)
+Staggered reveals avoided (all UI loads at once except sea grid data)
+Dark Mode:
+
+Auto-detects via window.matchMedia('(prefers-color-scheme: dark)')
+Adds .dark class to <html> element
+Map tiles: CSS filter brightness(0.85) contrast(1.05) hue-rotate(-10deg) for muted aesthetic
+All color variables swap to dark palette
+Responsive Design
+Breakpoint: 500px
+
+css
+@media (max-width: 500px) {
+  .control-panel { top: 10px; right: 10px; left: 10px; }  /* Full width */
+  .panel-title { font-size: 17px; }
+  .stat-val { font-size: 18px; }
+}
+
+Touch-Friendly:
+
+Buttons: min 44px touch target (iOS guidelines)
+Draggable markers: cursor changes on hover/drag
+No hover-only interactions
+Browser Compatibility
+Minimum Requirements:
+
+ES6+ (async/await, arrow functions, template literals, const/let)
+CSS Grid & Flexbox
+CSS Custom Properties (variables)
+Canvas API
+Fetch API
+matchMedia for dark mode detection
+Tested On:
+
+Chrome 90+
+Firefox 88+
+Safari 14+
+Edge 90+
+Known Issues:
+
+Must run on HTTP/HTTPS server (not file:// protocol) due to CORS
+Safari may have slightly slower A* performance on very long routes
+iOS Safari: map interactions may interfere with scroll-to-zoom gestures
+Deployment Constraints
+CORS Requirements
+Why a Server is Required:
+
+Fetching unpkg.com/world-atlas@2/land-110m.json requires HTTP origin
+CartoDB tile server sends CORS headers only for HTTP/HTTPS requests
+file:// protocol has null origin, blocked by all external resources
+Local Development Options:
+
+bash
+# Python 3
+python3 -m http.server 8000
+
+# Python 2
+python -m SimpleHTTPServer 8000
+
+# Node.js
+npx http-server -p 8000
+
+# PHP
+php -S localhost:8000
+
+Production Hosting:
+
+Static file hosts (Netlify, Vercel, GitHub Pages, Cloudflare Pages)
+No server-side logic required
+CDN-friendly (all dependencies from external CDNs)
+CSP (Content Security Policy)
+Current app relies on:
+
+unpkg.com (Leaflet, TopoJSON client, world-atlas data)
+cdnjs.cloudflare.com (html2canvas, Font Awesome)
+fonts.googleapis.com + fonts.gstatic.com (Google Fonts)
+basemaps.cartocdn.com (map tiles)
+If deploying to environment with strict CSP, ensure tile domains are whitelisted in img-src (or default-src if img-src is omitted), otherwise the basemap will be blocked.
+
+Performance Characteristics
+Load Time:
+
+Initial HTML parse: <100ms
+External script loading (Leaflet, TopoJSON, html2canvas): ~500ms (cached: ~50ms)
+Sea grid build (fetch + rasterize + carve canals): 1-3 seconds
+Total to interactive: ~2-4 seconds on broadband
+A Pathfinding:*
+
+Grid size: 720×360 = 259,200 cells
+Average route (e.g., New York to London): ~200-500ms
+Long route (e.g., New York to Tokyo): ~1-2 seconds
+Worst-case (circumnavigation): ~3-4 seconds
+Memory Usage:
+
+Sea grid (Uint8Array): 259 KB
+A* working memory (per run): ~6 MB (g, came, closed arrays)
+Leaflet layers: ~50-100 KB per route
+Typical session (10 ports, 5 routes): ~10 MB total
+Optimization Opportunities:
+
+Web Worker for A* computation (prevent UI freeze on long routes)
+IndexedDB caching of TopoJSON data (skip re-fetch on reload)
+Higher-resolution grid (1440×720) for narrow straits, at cost of 4× memory + slower pathfinding
+Tile-based route rendering for very long routes (reduce polyline vertex count)
+Known Limitations & Edge Cases
+Straight-Line Fallback: None implemented. If sea routing fails, user sees error hint. Could add Euclidean fallback for debug/testing.
+
+Antimeridian Routes: Handled via longitude unwrapping, but user may see polyline "wrapping" visually if bubble is dragged far from port across date line.
+
+Polar Routes: Grid resolution degrades near poles (Mercator distortion). Routes above 80°N/S may be inaccurate.
+
+Canal Precision: Manually carved canals are 1-2 cells wide (0.5-1° ~50-100km). Real-world canal widths are much narrower, but rasterization requires this.
+
+Island Hopping: 110m simplification omits small islands. Routes may pass "through" visually, though pathfinding correctly avoids rasterized land.
+
+Port Label Overlap: With many ports in small area, permanent labels overlap. No collision detection or label culling.
+
+Bubble Pointer Direction: Always points from bottom-left corner. Doesn't rotate based on port position. Trade-off for simplicity vs. perfect UX.
+
+Undo/Redo: Not implemented. Users must manually delete/recreate or restore from JSON export.
+
+Distance Ruler Persistence: Measurements are intentionally excluded from JSON export/import so shared atlas files stay focused on ports and routes.
+
+Multi-Port Routes: Not supported. Each route is point-to-point. Waypoint chains would require route chaining logic.
+
+Future Enhancement Ideas
+High Priority
+*Web Worker A ** - Offload pathfinding to prevent UI freeze on long routes
+Route Editing - Click-and-drag route path to add waypoints
+Undo/Redo - Command pattern for all mutations
+Medium Priority
+Custom Markers - Upload icons or choose from symbol library
+Route Styles - Line color, thickness, dash pattern per route
+Multi-Select - Bulk delete ports/routes
+Print Mode - Dedicated print layout with legend
+GPX Export - Export routes as GPS tracks
+Low Priority / Nice-to-Have
+Collaboration - Real-time multi-user editing (requires backend)
+Historical Routes - Pre-loaded famous voyages (Magellan, Cook, etc.)
+Wind/Current Layers - Animated wind patterns (external API)
+3D Globe View - Cesium.js integration for orthographic projection
+Route Animation - Animated ship token following route path
+Elevation Profile - Show depth contours along route (bathymetry data)
+Code Handoff Checklist
+What's Included
+✅ Single HTML file (index.html) with embedded CSS + JavaScript
+✅ All dependencies loaded from CDN (no npm/build step)
+✅ Dark mode support (auto-detects system preference)
+✅ Mobile-responsive layout
+✅ Comprehensive inline comments in JavaScript
+✅ Help/FAQ modal with user documentation
+✅ Export/import for state persistence
+✅ Port search / jump tool
+✅ Straight-line distance ruler
+
+What's NOT Included
+❌ Unit tests (manual testing only)
+❌ Build tooling (Webpack, Vite, etc.)
+❌ Backend/database (100% client-side)
+❌ User authentication
+❌ Analytics/telemetry
+❌ Error logging service
+
+Testing Checklist
+ Run on local HTTP server (not file://)
+ Wait for "Sea charts loaded" before drawing routes
+ Test port creation, editing, deletion
+ Test route drawing (short, long, alternative selection)
+ Test route-choice cancel / choose flow
+ Test info bubble creation, drag, hide
+ Test port search results and map jump
+ Test distance ruler preview + popup
+ Test PNG export (verify no UI elements in output)
+ Test JSON export → clear → import (verify full state restoration)
+ Test dark mode toggle
+ Test mobile viewport (narrow screen)
+ Test keyboard shortcuts (Esc to close modals)
+Quick Start for New Maintainer
+bash
+# 1. Clone/download the HTML file
+wget [URL_TO_FILE] -O index.html
+
+# 2. Start local server
+python3 -m http.server 8000
+
+# 3. Open browser
+open http://localhost:8000
+
+# 4. Verify sea charts load
+# - Wait ~2 seconds for "Sea charts loaded" status
+# - If stuck on "Preparing charts…", check browser console for CORS errors
+
+# 5. Test basic workflow
+# - Click map to add 2 ports (e.g., New York, London)
+# - Click "Draw Route" button
+# - Click both ports to draw route
+# - Wait ~1 second for A* to complete
+# - Verify route follows realistic Atlantic path
+
+# 6. Make changes
+# - Edit HTML in text editor
+# - Refresh browser (no build step)
+# - Check console for errors
+
+Contact & Maintenance Notes
+Original Development: 2026-04-17
+LLM: Claude Sonnet 4.5 (Anthropic)
+License: (Not specified - determine before public release)
+File Size: ~1900 lines HTML (~140 KB uncompressed)
+
+Key Files to Understand (in order):
+
+CSS block (lines ~12-450): Design system, dark mode, responsive layout
+buildSeaGrid() function (lines ~950-1050): TopoJSON fetch + rasterization
+astar() function (lines ~1100-1200): Core pathfinding algorithm
+plotRoute() function (lines ~1250-1350): Route calculation orchestration
+addMarker() / Port modal logic (lines ~750-900): Port management
+Export/import functions (lines ~1600-1750): Persistence layer
+Common Modification Scenarios:
+
+Task	Files/Functions to Edit	Difficulty
+Change map tiles	L.tileLayer URL (line ~670)	Easy
+Adjust grid resolution	GRID_W, GRID_H constants (line ~620)	Medium (affects performance)
+Add more canals	carveCanal() calls in buildSeaGrid()	Easy
+Customize route colors	CSS variables --route-color / --route-alt-color	Easy
+Change port icon	makeIcon() function HTML (line ~720)	Medium (CSS + divIcon)
+Add new modal	HTML block + CSS + event listeners	Medium
+Implement undo/redo	Requires command pattern architecture	Hard
+End of Technical Specification
+
+This document should provide sufficient context for another LLM or developer to understand, maintain, and extend the Mariner's Atlas application. For questions or clarifications, refer to inline code comments or test specific behaviors in a browser.
