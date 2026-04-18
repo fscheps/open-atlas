@@ -183,6 +183,74 @@ Acceptance criteria:
 - exported PNG shows the selected style
 - JSON stores the style setting
 
+### B6. Add place search for creating locations
+
+Goal:
+Let users create a location by searching for a city or place name, instead of only clicking the map manually.
+
+Files:
+
+- `index.html`
+- `assets/scripts/app.js`
+- docs
+
+Acceptance criteria:
+
+- user can open a place-search flow from the UI
+- selecting a result creates a new location on the map
+- behavior works without breaking the current click-to-add flow
+- docs explain whether results come from a live geocoder or a bundled dataset
+
+### B7. Add location type metadata
+
+Goal:
+Store whether a saved point is a `port`, `city`, `airport`, or generic `location`.
+
+Files:
+
+- `assets/scripts/app.js`
+- `index.html`
+- docs
+
+Acceptance criteria:
+
+- new points can carry a location type
+- type is preserved in JSON import/export
+- UI can render a different label or icon for each type without breaking older files
+
+### B8. Add “find saved item” copy and mode-aware search language
+
+Goal:
+Clarify that the existing search modal looks through items already saved in the current map, not the world at large.
+
+Files:
+
+- `index.html`
+- `assets/scripts/app.js`
+- docs
+
+Acceptance criteria:
+
+- search modal title/subtitle and empty state are clearer
+- wording becomes mode-aware where practical
+- no functionality changes are required beyond copy and labels
+
+### B9. Add city-to-port helper
+
+Goal:
+Optionally help users choose a nearby port after selecting a city, without forcing full automation.
+
+Files:
+
+- `assets/scripts/app.js`
+- docs
+
+Acceptance criteria:
+
+- workflow is explicitly optional
+- user can keep the city itself or switch to a suggested nearby port
+- implementation documents the data source and fallback behavior
+
 ## Track C: Presentation styling
 
 ### C1. Add presentation map style toggle
@@ -304,6 +372,24 @@ Acceptance criteria:
 - legend text is editable
 - PNG export includes it when visible
 
+### D4. Add copy cleanup pass for “atlas” vs “map”
+
+Goal:
+Keep `Open Atlas` as the product name while using simpler words like `map`, `location`, and `project` in UI copy where clearer.
+
+Files:
+
+- `index.html`
+- `assets/scripts/app.js`
+- `README.md`
+- docs
+
+Acceptance criteria:
+
+- product name remains consistent
+- ambiguous phrases such as “current atlas” are reduced where they confuse users
+- help text and modal copy feel more natural for non-maritime use cases
+
 ## Track E: Export improvements
 
 ### E1. Add SVG export spike
@@ -402,6 +488,92 @@ Acceptance criteria:
 - PNG export respects visibility state
 - JSON persists visibility settings if needed
 
+### F4. Add item picker chips in route creation
+
+Goal:
+Help users connect saved items by selecting them from a compact list, not only by clicking map markers.
+
+Files:
+
+- `index.html`
+- `assets/scripts/app.js`
+- `assets/styles/app.css`
+
+Acceptance criteria:
+
+- user can pick origin and destination from saved items
+- map still supports click-based selection
+- picker stays usable with larger saved-item lists
+
+## Track I: Air and network maps
+
+### I1. Add air route preset in Connections mode
+
+Goal:
+Provide a ready-made flight-map style built on top of Connections mode.
+
+Files:
+
+- `assets/scripts/app.js`
+- `assets/styles/app.css`
+- docs
+
+Acceptance criteria:
+
+- preset is easy to discover
+- routes default to a flight-friendly style
+- no maritime behavior changes in Maritime mode
+
+### I2. Add airport iconography and labels
+
+Goal:
+Visually distinguish airports from ports and generic locations.
+
+Files:
+
+- `assets/scripts/app.js`
+- `assets/styles/app.css`
+- maybe `index.html`
+
+Acceptance criteria:
+
+- airports render with their own icon or badge
+- labels remain readable
+- JSON preserves the airport type
+
+### I3. Add airport-to-airport connection flow
+
+Goal:
+Make it easy to connect two airports with a straight or arc route.
+
+Files:
+
+- `assets/scripts/app.js`
+- `index.html`
+- docs
+
+Acceptance criteria:
+
+- user can create an air route between saved airports
+- route exports in JSON and GeoJSON
+- route works with both straight and arc styles
+
+### I4. Add directional arrows for air routes
+
+Goal:
+Show travel direction more clearly on flight or network maps.
+
+Files:
+
+- `assets/scripts/app.js`
+- `assets/styles/app.css`
+
+Acceptance criteria:
+
+- arrows can be enabled or disabled
+- exported visuals show the direction markers cleanly
+- maritime routes are not visually cluttered by default
+
 ## Track G: Performance
 
 ### G1. Move routing work into a Web Worker
@@ -491,7 +663,21 @@ Acceptance criteria:
 11. D1
 12. B4
 13. B5
-14. E1
-15. F1
-16. F3
-17. G1
+14. B8
+15. D4
+16. C1
+17. C2
+18. C3
+19. D1
+20. B6
+21. B7
+22. B4
+23. B5
+24. I1
+25. I2
+26. I3
+27. F1
+28. F3
+29. F4
+30. E1
+31. G1

@@ -25,6 +25,7 @@ The highest-value next work is:
 1. open-source transparency and dependency vendoring
 2. generalizing beyond maritime-only atlases in a lightweight way
 3. preserving a polished export workflow
+4. improving language and discovery so saved-item search, place search, and future air-route flows are easier to understand
 
 ## Important constraints
 
