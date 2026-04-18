@@ -552,39 +552,23 @@
   .port-label::before { display: none !important; }
 
   /* Info bubble - callout style with pointer */
-  .bubble-marker {
-    background: transparent !important;
-    border: none !important;
-    overflow: visible !important;
-  }
-  .bubble-hitbox {
-    position: relative;
-    width: 720px;
-    height: 520px;
-    overflow: visible;
-    pointer-events: auto;
-  }
-  .bubble-shell {
+  .bubble-overlay {
     position: absolute;
-    left: 360px;
-    top: 260px;
-    width: 1px;
-    height: 1px;
-    overflow: visible;
-    pointer-events: auto;
-    --bubble-accent: var(--accent);
-    --bubble-offset-x: 52px;
-    --bubble-offset-y: -122px;
-    --bubble-width: 236px;
-    --bubble-min-height: 150px;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 430;
   }
-  .bubble-shell .info-bubble {
-    pointer-events: auto;
-    z-index: 2;
+  .map-bubble-wrapper {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
   }
   .bubble-tail-svg {
     position: absolute;
-    overflow: visible;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     z-index: 1;
     pointer-events: none;
   }
@@ -596,9 +580,6 @@
   }
   .info-bubble {
     position: absolute;
-    left: var(--bubble-offset-x);
-    top: var(--bubble-offset-y);
-    width: var(--bubble-width);
     background: var(--label-bg);
     color: var(--label-ink);
     border: 1px solid var(--border);
@@ -607,16 +588,17 @@
     font-family: var(--font-body);
     font-size: 15px;
     line-height: 1.4;
-    min-width: 168px;
-    max-width: 360px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.25);
     cursor: move;
-    position: relative;
-    min-height: var(--bubble-min-height);
+    min-width: 168px;
+    min-height: 116px;
     white-space: pre-wrap;
     word-wrap: break-word;
     backdrop-filter: blur(3px);
     touch-action: none;
+    pointer-events: auto;
+    user-select: none;
+    overflow: hidden;
   }
   .info-bubble .bubble-handle {
     position: absolute;
@@ -641,8 +623,10 @@
   }
   .bubble-body {
     padding-right: 18px;
+    height: calc(100% - 22px);
+    overflow: auto;
   }
-  .bubble-resize {
+  .bubble-resize-grip {
     position: absolute;
     right: 8px;
     bottom: 8px;

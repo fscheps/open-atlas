@@ -11,6 +11,7 @@ Open Atlas is a static, open-source map storytelling app built for easy sharing 
 - Draw sea routes that avoid land using client-side pathfinding
 - Draw straight visual connections for network and flight-style maps
 - Choose point icons and per-point colors for clearer map storytelling
+- Drag and resize map callouts freely while keeping them anchored to their points
 - Use the studio comfortably on desktop, tablet, and mobile layouts
 - Save and reopen atlases as JSON for continued editing
 - Autosave local drafts and restore them later from the control panel
@@ -39,6 +40,7 @@ Open Atlas is designed for a simple workflow:
 - `index.html`
 - `assets/styles/app.css`
 - `assets/scripts/app.js`
+- `assets/vendor/interact.min.js`
 - `assets/open-atlas-verification.png`
 - `docs/prototype_with_poe/`
 

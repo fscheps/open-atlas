@@ -10,7 +10,7 @@ Open Atlas is a static browser application for building visual map atlases with:
 - selectable map modes: `Maritime`, `Pins`, and `Connections`
 - maritime routes generated client-side
 - straight-line connections for network and flight-style maps
-- notes and draggable annotation bubbles
+- notes and draggable, resizable annotation bubbles
 - draft autosave
 - undo and redo
 - PNG export with framing and quality controls
@@ -33,6 +33,8 @@ The project is intentionally:
   Visual system, layout, modals, panel styling, responsive rules
 - `assets/scripts/app.js`
   App state, map behavior, routing, export logic, autosave, history
+- `assets/vendor/interact.min.js`
+  Vendored drag interaction dependency used by the callout overlay system
 - `docs/prototype_with_poe/`
   Historical prototype artifacts kept for reference
 - `output/playwright/`
@@ -46,6 +48,8 @@ The project is intentionally:
 - Edit names and notes
 - Choose per-point icons and colors
 - Toggle draggable and resizable info bubbles
+- Move callouts freely around the visible map while their tails stay anchored to the selected point
+- Resize callouts in both width and height
 - Search saved locations by name or notes
 - Measure straight-line distance
 
@@ -114,7 +118,7 @@ The editable atlas export shape currently includes:
 ```json
 {
   "format": "open-atlas",
-  "version": 4,
+  "version": 5,
   "exported": "ISO timestamp",
   "view": {
     "center": [25, -30],
@@ -147,6 +151,7 @@ The editable atlas export shape currently includes:
       "details": "",
       "bubbleVisible": false,
       "bubbleWidth": 236,
+      "bubbleHeight": 172,
       "bubbleOffsetX": 52,
       "bubbleOffsetY": -122,
       "bubbleLat": null,
@@ -159,12 +164,13 @@ The editable atlas export shape currently includes:
 
 Notes:
 
-- `version` is currently `4`
+- `version` is currently `5`
 - JSON is the source-of-truth editable format
 - GeoJSON is an export convenience format, not the primary editable schema
 - draft autosaves reuse the same atlas shape plus a `draftSavedAt` timestamp
 - the app still accepts legacy `mariners-atlas` JSON on import and during browser draft migration
 - routes may now include a `routeMode` field such as `maritime` or `connection`
+- bubbles now store width, height, and offset-from-point values
 
 ## Main code areas in `assets/scripts/app.js`
 
@@ -172,6 +178,7 @@ Notes:
 - draft persistence
 - history snapshots
 - marker and bubble management
+- overlay-based callout geometry and interaction
 - port search
 - sea-grid generation
 - A* routing and alternative route detection
@@ -187,6 +194,7 @@ Important current external dependencies:
 
 - Leaflet
 - html2canvas
+- Interact.js
 - topojson-client
 - world-atlas land data
 - CARTO basemap tiles

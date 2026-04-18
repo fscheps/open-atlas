@@ -9,6 +9,7 @@ This repository aims to stay transparent about every third-party component used 
 | Leaflet 1.9.4 | CDN in `index.html` | Interactive map rendering, markers, polylines, viewport management | Candidate for self-hosting |
 | topojson-client 3.x | CDN in `index.html` | Convert world land TopoJSON into GeoJSON features for rasterization | Candidate for self-hosting |
 | html2canvas 1.4.1 | CDN in `index.html` | Render map or studio view to PNG | Candidate for self-hosting |
+| Interact.js | Vendored at `assets/vendor/interact.min.js` | Drag and resize interactions for the overlay callout system | MIT-licensed, framework-agnostic |
 | Font Awesome Free 6.4.0 | CDN in `index.html` | Interface icons | Candidate for replacement with a simpler fully vendored icon set |
 | Google Fonts families | Google Fonts stylesheet in `index.html` | Typography for title, body, and UI fonts | Candidate for self-hosting |
 | world-atlas land dataset | Remote fetch in `assets/scripts/app.js` | 110m world land polygons used to build the sea/land grid | Candidate for vendoring into `assets/data/` |

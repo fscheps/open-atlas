@@ -33,20 +33,18 @@
   map.getPane('presentationLand').style.zIndex = 250;
   const BUBBLE_DEFAULT_WIDTH = 236;
   const BUBBLE_MIN_WIDTH = 168;
-  const BUBBLE_MAX_WIDTH = 360;
+  const BUBBLE_MAX_WIDTH = 520;
+  const BUBBLE_DEFAULT_HEIGHT = 172;
+  const BUBBLE_MIN_HEIGHT = 116;
+  const BUBBLE_MAX_HEIGHT = 420;
   const BUBBLE_DEFAULT_RIGHT_OFFSET = 76;
   const BUBBLE_DEFAULT_LEFT_GAP = 56;
   const BUBBLE_DEFAULT_TOP_OFFSET = -104;
   const BUBBLE_DEFAULT_BOTTOM_OFFSET = 24;
-  const BUBBLE_HITBOX_WIDTH = 720;
-  const BUBBLE_HITBOX_HEIGHT = 520;
-  const BUBBLE_HITBOX_ANCHOR_X = 360;
-  const BUBBLE_HITBOX_ANCHOR_Y = 260;
-  const BUBBLE_OFFSET_X_RIGHT_MAX = 320;
-  const BUBBLE_OFFSET_X_LEFT_MIN = -360;
-  const BUBBLE_OFFSET_Y_MIN = -210;
-  const BUBBLE_OFFSET_Y_MAX = 140;
   const BUBBLE_LEGACY_DISTANCE_LIMIT = 250;
+  const BUBBLE_VIEW_MARGIN = 12;
+  const bubbleOverlay = L.DomUtil.create('div', 'bubble-overlay', map.getContainer());
+  bubbleOverlay.setAttribute('aria-hidden', 'true');
 
   function refreshPresentationLayerStyle() {
     if (!presentationLandLayer) return;
@@ -201,7 +199,7 @@
   const ATLAS_FORMAT = 'open-atlas';
   const LEGACY_ATLAS_FORMAT = 'mariners-atlas';
   const ATLAS_GEOJSON_FORMAT = 'open-atlas-geojson';
-  const ATLAS_VERSION = 4;
+  const ATLAS_VERSION = 5;
   const SETTINGS_STORAGE_KEY = 'open-atlas-settings-v2';
   const LEGACY_SETTINGS_STORAGE_KEY = 'mariners-atlas-settings-v1';
   const DRAFT_STORAGE_KEY = 'open-atlas-draft-v2';
@@ -512,6 +510,10 @@
     return Number.isFinite(value) ? Math.round(clamp(value, BUBBLE_MIN_WIDTH, BUBBLE_MAX_WIDTH)) : null;
   }
 
+  function normalizeBubbleHeight(value) {
+    return Number.isFinite(value) ? Math.round(clamp(value, BUBBLE_MIN_HEIGHT, BUBBLE_MAX_HEIGHT)) : null;
+  }
+
   function estimateBubbleWidth(name, details) {
     const content = `${name || ''}\n${details || ''}`.trim();
     const longestLine = content
@@ -524,8 +526,8 @@
   function normalizeBubbleOffset(offset) {
     if (!offset || !Number.isFinite(offset.x) || !Number.isFinite(offset.y)) return null;
     return {
-      x: Math.round(clamp(offset.x, BUBBLE_OFFSET_X_LEFT_MIN, BUBBLE_OFFSET_X_RIGHT_MAX)),
-      y: Math.round(clamp(offset.y, BUBBLE_OFFSET_Y_MIN, BUBBLE_OFFSET_Y_MAX))
+      x: Math.round(offset.x),
+      y: Math.round(offset.y)
     };
   }
 
@@ -1027,7 +1029,10 @@
 
   function closeSettingsModal() {
     settingsModal.classList.remove('show');
-    requestAnimationFrame(() => map.invalidateSize(false));
+    requestAnimationFrame(() => {
+      map.invalidateSize(false);
+      refreshAllBubbles();
+    });
   }
 
   function syncActionState() {
@@ -1107,6 +1112,7 @@
       details: opts.details || '',
       bubbleVisible: false,
       bubbleWidth: normalizeBubbleWidth(opts.bubbleWidth) || estimateBubbleWidth(name, opts.details || ''),
+      bubbleHeight: normalizeBubbleHeight(opts.bubbleHeight) || estimateBubbleHeight({ details: opts.details || '' }),
       bubbleOffset: normalizeBubbleOffset({
         x: opts.bubbleOffsetX,
         y: opts.bubbleOffsetY
@@ -1115,7 +1121,8 @@
         opts.bubbleLatLng ? L.latLng(opts.bubbleLatLng.lat, opts.bubbleLatLng.lng) : null,
         normalizeBubbleWidth(opts.bubbleWidth) || BUBBLE_DEFAULT_WIDTH
       ),
-      bubble: null
+      bubble: null,
+      bubbleInteractable: null
     };
     marker.on('click', (ev) => {
       L.DomEvent.stopPropagation(ev);
@@ -1224,12 +1231,12 @@
   }
 
   /* ===== Info bubble ===== */
-  function getBubbleAlignment(entry) {
-    return (entry.bubbleOffset ? entry.bubbleOffset.x : 0) >= 0 ? 'right' : 'left';
-  }
-
   function getBubbleWidth(entry) {
     return normalizeBubbleWidth(entry.bubbleWidth) || BUBBLE_DEFAULT_WIDTH;
+  }
+
+  function getBubbleHeight(entry) {
+    return normalizeBubbleHeight(entry.bubbleHeight) || estimateBubbleHeight(entry) || BUBBLE_DEFAULT_HEIGHT;
   }
 
   function getBubbleOffset(entry) {
@@ -1242,17 +1249,12 @@
     const detailLines = String(entry.details || '')
       .split('\n')
       .reduce((count, line) => count + Math.max(1, Math.ceil(line.length / 22)), 0);
-    return clamp(116 + detailLines * 20, 132, 300);
+    return clamp(BUBBLE_DEFAULT_HEIGHT + detailLines * 20, 132, 320);
   }
 
-  function buildBubbleTailGeometry(offset, width, height) {
-    const rect = {
-      left: offset.x,
-      top: offset.y,
-      right: offset.x + width,
-      bottom: offset.y + height
-    };
-    const anchor = { x: 0, y: 0 };
+  function buildBubbleTailGeometry(anchorX, anchorY, left, top, width, height) {
+    const rect = { left, top, right: left + width, bottom: top + height };
+    const anchor = { x: anchorX, y: anchorY };
     const radius = 18;
     const baseHalf = clamp(14, Math.min(width, height) * 0.12, 22);
     let p1;
@@ -1276,18 +1278,9 @@
       p2 = { x: cx + baseHalf, y: rect.bottom };
     }
 
-    const padding = 20;
-    const minX = Math.min(anchor.x, p1.x, p2.x) - padding;
-    const minY = Math.min(anchor.y, p1.y, p2.y) - padding;
-    const maxX = Math.max(anchor.x, p1.x, p2.x) + padding;
-    const maxY = Math.max(anchor.y, p1.y, p2.y) + padding;
-    const toLocal = (point) => ({
-      x: point.x - minX,
-      y: point.y - minY
-    });
-    const localAnchor = toLocal(anchor);
-    const localP1 = toLocal(p1);
-    const localP2 = toLocal(p2);
+    const localAnchor = anchor;
+    const localP1 = p1;
+    const localP2 = p2;
     const control1 = {
       x: localP1.x + (localAnchor.x - localP1.x) * 0.58,
       y: localP1.y + (localAnchor.y - localP1.y) * 0.58
@@ -1298,146 +1291,210 @@
     };
 
     return {
-      left: minX,
-      top: minY,
-      width: Math.max(1, maxX - minX),
-      height: Math.max(1, maxY - minY),
       path: `M ${localP1.x} ${localP1.y} Q ${control1.x} ${control1.y} ${localAnchor.x} ${localAnchor.y} Q ${control2.x} ${control2.y} ${localP2.x} ${localP2.y} Z`
     };
   }
 
+  function getBubbleLayout(entry, overrides) {
+    const options = overrides || {};
+    const size = map.getSize();
+    const anchorPoint = map.latLngToContainerPoint(entry.latlng);
+    const maxWidth = Math.max(BUBBLE_MIN_WIDTH, size.x - BUBBLE_VIEW_MARGIN * 2);
+    const maxHeight = Math.max(BUBBLE_MIN_HEIGHT, size.y - BUBBLE_VIEW_MARGIN * 2);
+    const width = Math.round(clamp(
+      normalizeBubbleWidth(options.width != null ? options.width : entry.bubbleWidth) || BUBBLE_DEFAULT_WIDTH,
+      BUBBLE_MIN_WIDTH,
+      maxWidth
+    ));
+    const height = Math.round(clamp(
+      normalizeBubbleHeight(options.height != null ? options.height : entry.bubbleHeight) || estimateBubbleHeight(entry),
+      BUBBLE_MIN_HEIGHT,
+      maxHeight
+    ));
+    const offset = normalizeBubbleOffset(options.offset != null ? options.offset : entry.bubbleOffset)
+      || defaultBubbleOffset(entry.latlng, width);
+    const unclampedLeft = anchorPoint.x + offset.x;
+    const unclampedTop = anchorPoint.y + offset.y;
+    const left = clamp(unclampedLeft, BUBBLE_VIEW_MARGIN, Math.max(BUBBLE_VIEW_MARGIN, size.x - width - BUBBLE_VIEW_MARGIN));
+    const top = clamp(unclampedTop, BUBBLE_VIEW_MARGIN, Math.max(BUBBLE_VIEW_MARGIN, size.y - height - BUBBLE_VIEW_MARGIN));
+
+    return {
+      anchorX: anchorPoint.x,
+      anchorY: anchorPoint.y,
+      left: Math.round(left),
+      top: Math.round(top),
+      width,
+      height,
+      offset: {
+        x: Math.round(left - anchorPoint.x),
+        y: Math.round(top - anchorPoint.y)
+      }
+    };
+  }
+
   function getLegacyBubbleLatLng(entry) {
-    const bubbleWidth = getBubbleWidth(entry);
-    const bubbleOffset = getBubbleOffset(entry);
-    const markerPoint = map.latLngToContainerPoint(entry.latlng);
-    const bubblePoint = L.point(
-      markerPoint.x + (bubbleOffset.x >= 0 ? bubbleOffset.x - 18 : bubbleOffset.x + bubbleWidth - 18),
-      markerPoint.y + bubbleOffset.y + 10
-    );
+    const layout = getBubbleLayout(entry);
+    const bubblePoint = L.point(layout.left + Math.min(layout.width * 0.45, 96), layout.top + 28);
     return map.containerPointToLatLng(bubblePoint);
   }
 
-  function makeBubbleIcon(entry) {
+  function ensureBubbleDom(entry) {
+    if (!entry.bubble) return null;
+    let tailSvg = entry.bubble.querySelector('.bubble-tail-svg');
+    let tailPath = tailSvg && tailSvg.querySelector('path');
+    let card = entry.bubble.querySelector('.info-bubble');
+    if (!tailSvg || !tailPath || !card) {
+      entry.bubble.innerHTML = `
+        <svg class="bubble-tail-svg" aria-hidden="true"><path></path></svg>
+        <div class="info-bubble" data-bubble-id="${entry.id}">
+          <div class="bubble-title"></div>
+          <div class="bubble-handle"><i class="fa-solid fa-up-down-left-right"></i></div>
+          <div class="bubble-body"></div>
+          <div class="bubble-resize-grip" aria-hidden="true"></div>
+        </div>
+      `;
+      tailSvg = entry.bubble.querySelector('.bubble-tail-svg');
+      tailPath = tailSvg.querySelector('path');
+      card = entry.bubble.querySelector('.info-bubble');
+    }
+    return { tailSvg, tailPath, card };
+  }
+
+  function applyBubbleDom(entry, layout) {
+    const dom = ensureBubbleDom(entry);
+    if (!dom) return;
     const { name, details } = entry;
     const safeDetails = escapeHtml(details || '').trim() || '<em style="opacity:.6">No details yet</em>';
     const bubbleAccent = normalizePointColor(entry.markerColor);
-    const bubbleWidth = getBubbleWidth(entry);
-    const bubbleOffset = getBubbleOffset(entry);
-    const bubbleHeight = estimateBubbleHeight(entry);
-    const tail = buildBubbleTailGeometry(bubbleOffset, bubbleWidth, bubbleHeight);
-    return L.divIcon({
-      className: 'bubble-marker',
-      html: `<div class="bubble-hitbox">
-               <div class="bubble-shell" style="--bubble-accent:${bubbleAccent}; --bubble-offset-x:${bubbleOffset.x}px; --bubble-offset-y:${bubbleOffset.y}px; --bubble-width:${bubbleWidth}px; --bubble-min-height:${bubbleHeight}px;">
-                 <svg class="bubble-tail-svg" viewBox="0 0 ${tail.width} ${tail.height}" style="left:${tail.left}px; top:${tail.top}px; width:${tail.width}px; height:${tail.height}px;" aria-hidden="true">
-                   <path d="${tail.path}"></path>
-                 </svg>
-                 <div class="info-bubble" data-bubble-id="${entry.id}">
-                   <div class="bubble-title">${escapeHtml(name)}</div>
-                   <div class="bubble-handle"><i class="fa-solid fa-up-down-left-right"></i></div>
-                   <div class="bubble-body">${safeDetails}</div>
-                   <div class="bubble-resize" data-bubble-id="${entry.id}" aria-hidden="true"></div>
-                 </div>
-               </div>
-             </div>`,
-      iconSize: [BUBBLE_HITBOX_WIDTH, BUBBLE_HITBOX_HEIGHT],
-      iconAnchor: [BUBBLE_HITBOX_ANCHOR_X, BUBBLE_HITBOX_ANCHOR_Y]
+    const tail = buildBubbleTailGeometry(layout.anchorX, layout.anchorY, layout.left, layout.top, layout.width, layout.height);
+    const mapSize = map.getSize();
+    dom.tailSvg.setAttribute('viewBox', `0 0 ${mapSize.x} ${mapSize.y}`);
+    dom.tailPath.setAttribute('d', tail.path);
+    dom.card.dataset.bubbleId = String(entry.id);
+    dom.card.style.setProperty('--bubble-accent', bubbleAccent);
+    dom.card.style.left = `${layout.left}px`;
+    dom.card.style.top = `${layout.top}px`;
+    dom.card.style.width = `${layout.width}px`;
+    dom.card.style.height = `${layout.height}px`;
+    const titleEl = dom.card.querySelector('.bubble-title');
+    const bodyEl = dom.card.querySelector('.bubble-body');
+    if (titleEl) titleEl.textContent = name;
+    if (bodyEl) bodyEl.innerHTML = safeDetails;
+  }
+
+  function persistBubbleLayout(entry, layout) {
+    entry.bubbleOffset = normalizeBubbleOffset(layout.offset);
+    entry.bubbleWidth = normalizeBubbleWidth(layout.width) || BUBBLE_DEFAULT_WIDTH;
+    entry.bubbleHeight = normalizeBubbleHeight(layout.height) || estimateBubbleHeight(entry);
+  }
+
+  function teardownBubbleInteraction(entry) {
+    if (entry.bubbleInteractable) {
+      entry.bubbleInteractable.unset();
+      entry.bubbleInteractable = null;
+    }
+  }
+
+  function initBubbleInteraction(entry) {
+    if (!entry.bubble || typeof interact !== 'function') return;
+    const card = entry.bubble.querySelector('.info-bubble');
+    const grip = entry.bubble.querySelector('.bubble-resize-grip');
+    if (!card) return;
+    teardownBubbleInteraction(entry);
+    const finish = () => {
+      map.dragging.enable();
+      scheduleDraftSave();
+      scheduleHistorySnapshot();
+    };
+    card.addEventListener('click', (event) => {
+      event.stopPropagation();
+    });
+    const interactable = interact(card)
+      .draggable({
+        ignoreFrom: '.bubble-resize-grip',
+        listeners: {
+          start() {
+            map.dragging.disable();
+          },
+          move(event) {
+            const nextOffset = normalizeBubbleOffset({
+              x: getBubbleOffset(entry).x + event.dx,
+              y: getBubbleOffset(entry).y + event.dy
+            });
+            const layout = getBubbleLayout(entry, { offset: nextOffset });
+            persistBubbleLayout(entry, layout);
+            updateBubbleContent(entry);
+          },
+          end: finish
+        }
+      });
+    entry.bubbleInteractable = interactable;
+
+    if (grip) {
+      grip.onpointerdown = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const startX = event.clientX;
+        const startY = event.clientY;
+        const startWidth = getBubbleWidth(entry);
+        const startHeight = getBubbleHeight(entry);
+        map.dragging.disable();
+
+        const onMove = (moveEvent) => {
+          const layout = getBubbleLayout(entry, {
+            width: startWidth + (moveEvent.clientX - startX),
+            height: startHeight + (moveEvent.clientY - startY)
+          });
+          persistBubbleLayout(entry, layout);
+          updateBubbleContent(entry);
+        };
+
+        const onUp = () => {
+          window.removeEventListener('pointermove', onMove);
+          window.removeEventListener('pointerup', onUp);
+          window.removeEventListener('pointercancel', onUp);
+          finish();
+        };
+
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', onUp);
+        window.addEventListener('pointercancel', onUp);
+      };
+    }
+  }
+
+  function refreshAllBubbles() {
+    markers.forEach((entry) => {
+      if (entry.bubbleVisible) updateBubbleContent(entry);
     });
   }
-
-  let bubbleDragState = null;
-
-  function beginBubbleInteraction(entry, mode, event) {
-    if (!entry) return;
-    event.preventDefault();
-    event.stopPropagation();
-    const mapRect = map.getContainer().getBoundingClientRect();
-    bubbleDragState = {
-      entry,
-      mode,
-      startX: event.clientX - mapRect.left,
-      startY: event.clientY - mapRect.top,
-      startOffset: getBubbleOffset(entry),
-      startWidth: getBubbleWidth(entry)
-    };
-    map.dragging.disable();
-  }
-
-  document.addEventListener('pointerdown', (event) => {
-    const target = event.target instanceof Element ? event.target : event.target?.parentElement;
-    if (!target) return;
-    const resizeHandle = target.closest('.bubble-resize');
-    const bubbleCard = resizeHandle || target.closest('.info-bubble');
-    if (!bubbleCard) return;
-    const id = Number(bubbleCard.dataset.bubbleId || resizeHandle?.dataset.bubbleId);
-    if (!id) return;
-    beginBubbleInteraction(findPort(id), resizeHandle ? 'resize' : 'move', event);
-  });
-
-  document.addEventListener('pointermove', (event) => {
-    if (!bubbleDragState) return;
-    const mapRect = map.getContainer().getBoundingClientRect();
-    const nextX = event.clientX - mapRect.left;
-    const nextY = event.clientY - mapRect.top;
-    const dx = nextX - bubbleDragState.startX;
-    const dy = nextY - bubbleDragState.startY;
-    const { entry, mode, startOffset, startWidth } = bubbleDragState;
-
-    if (mode === 'move') {
-      entry.bubbleOffset = normalizeBubbleOffset({
-        x: startOffset.x + dx,
-        y: startOffset.y + dy
-      });
-    } else {
-      const nextWidth = startWidth + dx;
-      entry.bubbleWidth = normalizeBubbleWidth(nextWidth) || BUBBLE_DEFAULT_WIDTH;
-    }
-
-    updateBubbleContent(entry, { skipRebind: true });
-  });
-
-  document.addEventListener('pointerup', () => {
-    if (!bubbleDragState) return;
-    bubbleDragState = null;
-    map.dragging.enable();
-    scheduleDraftSave();
-    scheduleHistorySnapshot();
-  });
-
-  document.addEventListener('pointercancel', () => {
-    if (!bubbleDragState) return;
-    bubbleDragState = null;
-    map.dragging.enable();
-    scheduleDraftSave();
-    scheduleHistorySnapshot();
-  });
 
   function showBubble(entry) {
     if (entry.bubble) return;
     if (!entry.bubbleOffset) entry.bubbleOffset = defaultBubbleOffset(entry.latlng, getBubbleWidth(entry));
     entry.bubbleVisible = true;
-
-    const bubble = L.marker(entry.latlng, {
-      icon: makeBubbleIcon(entry),
-      autoPan: false,
-      zIndexOffset: 500
-    }).addTo(map);
-
-    bubble.on('click', (ev) => { L.DomEvent.stopPropagation(ev); });
-
+    const bubble = document.createElement('div');
+    bubble.className = 'map-bubble-wrapper';
+    bubble.dataset.bubbleId = String(entry.id);
+    bubbleOverlay.appendChild(bubble);
     entry.bubble = bubble;
+    updateBubbleContent(entry);
+    initBubbleInteraction(entry);
   }
 
-  function updateBubbleContent(entry, options) {
+  function updateBubbleContent(entry) {
     if (!entry.bubble) return;
-    entry.bubble.setLatLng(entry.latlng);
-    entry.bubble.setIcon(makeBubbleIcon(entry));
+    const layout = getBubbleLayout(entry);
+    persistBubbleLayout(entry, layout);
+    applyBubbleDom(entry, layout);
+    if (!entry.bubbleInteractable) initBubbleInteraction(entry);
   }
 
   function hideBubble(entry) {
     entry.bubbleVisible = false;
     if (entry.bubble) {
-      map.removeLayer(entry.bubble);
+      teardownBubbleInteraction(entry);
+      entry.bubble.remove();
       entry.bubble = null;
     }
   }
@@ -2460,11 +2517,14 @@
 
     markers.forEach((markerEntry) => {
       bounds.extend(markerEntry.latlng);
-      if (markerEntry.bubbleVisible && markerEntry.bubble && markerEntry.bubble.getElement()) {
-        const rect = markerEntry.bubble.getElement().getBoundingClientRect();
-        const mapRect = map.getContainer().getBoundingClientRect();
-        bounds.extend(map.containerPointToLatLng([rect.left - mapRect.left, rect.top - mapRect.top]));
-        bounds.extend(map.containerPointToLatLng([rect.right - mapRect.left, rect.bottom - mapRect.top]));
+      if (markerEntry.bubbleVisible && markerEntry.bubble && markerEntry.bubble.isConnected) {
+        const bubbleCard = markerEntry.bubble.querySelector('.info-bubble');
+        if (bubbleCard) {
+          const rect = bubbleCard.getBoundingClientRect();
+          const mapRect = map.getContainer().getBoundingClientRect();
+          bounds.extend(map.containerPointToLatLng([rect.left - mapRect.left, rect.top - mapRect.top]));
+          bounds.extend(map.containerPointToLatLng([rect.right - mapRect.left, rect.bottom - mapRect.top]));
+        }
       }
       hasContent = true;
     });
@@ -2492,7 +2552,7 @@
       pushRect(entry.marker.getElement());
       const tooltip = entry.marker.getTooltip();
       pushRect(tooltip && tooltip.getElement());
-      pushRect(entry.bubble && entry.bubble.getElement());
+      pushRect(entry.bubble && entry.bubble.querySelector('.info-bubble'));
     });
 
     return rects;
@@ -2606,6 +2666,7 @@
         details: m.details || '',
         bubbleVisible: !!m.bubbleVisible,
         bubbleWidth: getBubbleWidth(m),
+        bubbleHeight: getBubbleHeight(m),
         bubbleOffsetX: getBubbleOffset(m).x,
         bubbleOffsetY: getBubbleOffset(m).y,
         bubbleLat: m.bubbleVisible ? getLegacyBubbleLatLng(m).lat : null,
@@ -2662,6 +2723,7 @@
             details: p.details || '',
             bubbleVisible: !!p.bubbleVisible,
             bubbleWidth: p.bubbleWidth,
+            bubbleHeight: p.bubbleHeight,
             bubbleOffsetX: p.bubbleOffsetX,
             bubbleOffsetY: p.bubbleOffsetY,
             bubbleLatLng: (p.bubbleLat != null && p.bubbleLng != null)
@@ -2924,6 +2986,7 @@
   systemThemeMedia.addEventListener('change', () => {
     if (settings.themeMode === 'auto') refreshThemeMode();
   });
+  map.on('move zoom resize', refreshAllBubbles);
   map.on('moveend', scheduleDraftSave);
 
   buildSeaGrid()
@@ -2937,7 +3000,7 @@
         loader.classList.add('hidden');
         setTimeout(() => loader.remove(), 500);
       }, 250);
-      setTimeout(() => showHint('Click anywhere on the map to add a port.'), 800);
+      setTimeout(() => showHint(`Click anywhere on the map to add a ${getModeCopy().pointSingular.toLowerCase()}.`), 800);
     })
     .catch(err => {
       console.error('Failed to load sea charts', err);
