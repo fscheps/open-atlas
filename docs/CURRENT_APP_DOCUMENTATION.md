@@ -7,7 +7,9 @@ This file is the current technical reference for the app in this repository.
 Open Atlas is a static browser application for building visual map atlases with:
 
 - ports or pinned locations
+- selectable map modes: `Maritime`, `Pins`, and `Connections`
 - maritime routes generated client-side
+- straight-line connections for network and flight-style maps
 - notes and draggable annotation bubbles
 - draft autosave
 - undo and redo
@@ -43,14 +45,22 @@ The project is intentionally:
 - Add locations by clicking the map
 - Edit names and notes
 - Choose per-point icons and colors
-- Toggle draggable info bubbles
-- Search ports by name or notes
+- Toggle draggable and resizable info bubbles
+- Search saved locations by name or notes
 - Measure straight-line distance
 
 ### Routing
 
+- Top-level map modes:
+  - `Maritime`
+    Port-focused wording plus routed sea paths
+  - `Pins`
+    Location-only maps with route creation disabled
+  - `Connections`
+    Location-focused wording plus straight visual links between points
 - Sea route plotting via A* pathfinding on a rasterized land/sea grid
 - Alternative route choice when a second viable path is meaningfully different
+- Straight connection drawing between two saved points in `Connections` mode
 - Distance display in kilometers and nautical miles
 
 ### Persistence
@@ -63,6 +73,7 @@ The project is intentionally:
 ### Visual customization
 
 - Title and subtitle
+- Map mode
 - Theme mode
 - Basemap style, including a built-in `Presentation Flat` mode
 - Display, body, and UI fonts
@@ -75,6 +86,7 @@ The project is intentionally:
 
 - Header collapse button plus same-edge reopen tab for the studio
 - Three-step workflow strip for `Add ports`, `Chart paths`, and `Export`
+- Mode-aware copy so maritime maps use `Port` language while non-maritime maps use `Location`
 - Scrollable sidebar with grouped sections for create, explore, save/share, workspace, and drafts
 - Bottom-sheet presentation on smaller screens for tablet and mobile use
 
@@ -102,7 +114,7 @@ The editable atlas export shape currently includes:
 ```json
 {
   "format": "open-atlas",
-  "version": 3,
+  "version": 4,
   "exported": "ISO timestamp",
   "view": {
     "center": [25, -30],
@@ -111,6 +123,7 @@ The editable atlas export shape currently includes:
   "settings": {
     "atlasTitle": "Open Atlas",
     "atlasSubtitle": "Map Studio",
+    "atlasMode": "maritime",
     "themeMode": "light",
     "mapStyle": "positron",
     "displayFont": "fraunces",
@@ -133,6 +146,9 @@ The editable atlas export shape currently includes:
       "markerColor": "#0b7a75",
       "details": "",
       "bubbleVisible": false,
+      "bubbleWidth": 236,
+      "bubbleOffsetX": 52,
+      "bubbleOffsetY": -122,
       "bubbleLat": null,
       "bubbleLng": null
     }
@@ -143,11 +159,12 @@ The editable atlas export shape currently includes:
 
 Notes:
 
-- `version` is currently `3`
+- `version` is currently `4`
 - JSON is the source-of-truth editable format
 - GeoJSON is an export convenience format, not the primary editable schema
 - draft autosaves reuse the same atlas shape plus a `draftSavedAt` timestamp
 - the app still accepts legacy `mariners-atlas` JSON on import and during browser draft migration
+- routes may now include a `routeMode` field such as `maritime` or `connection`
 
 ## Main code areas in `assets/scripts/app.js`
 
@@ -187,7 +204,7 @@ Notes:
 - No backend
 - No user accounts
 - No server-side storage
-- Current routing is maritime-specific
+- `Connections` mode currently supports straight visual links only; curved arc styles are still future work
 - Current history is session-only, not persisted across reloads
 - Current export system renders DOM to canvas, so it is raster-first
 
@@ -196,8 +213,8 @@ Notes:
 Before calling a change done, verify:
 
 - the app loads from a simple static server
-- ports can be added, edited, searched, and deleted
-- routes can still be drawn
+- ports or locations can be added, edited, searched, and deleted
+- maritime routes and connection links can still be drawn in their respective modes
 - JSON import/export still works
 - PNG export still works
 - no obvious console errors appear
@@ -206,7 +223,7 @@ Before calling a change done, verify:
 
 The best product expansion paths are:
 
-1. `Pins & Labels` mode for location-only maps
-2. `Presentation` mode with custom sea and land colors
-3. `Connections` mode for simple flight or network-style lines
-4. vendored dependencies and attribution docs for a cleaner OSS story
+1. curved arc styling for `Connections` mode
+2. place search for creating locations by city name
+3. vendored dependencies and attribution docs for a cleaner OSS story
+4. self-hosted fonts and tighter CSP

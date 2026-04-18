@@ -55,7 +55,7 @@
     </button>
   </div>
 
-  <div class="panel-intro">
+  <div class="panel-intro" id="panelIntroText">
     Click anywhere on the map to add ports, then use the tools here to chart, annotate, save, and share your atlas.
   </div>
 
@@ -68,11 +68,11 @@
   <div class="stats">
     <div class="stat">
       <div class="stat-val" id="portCount">0</div>
-      <div class="stat-lbl">Ports</div>
+      <div class="stat-lbl" id="pointCountLabel">Ports</div>
     </div>
     <div class="stat">
       <div class="stat-val" id="routeCount">0</div>
-      <div class="stat-lbl">Routes</div>
+      <div class="stat-lbl" id="routeCountLabel">Routes</div>
     </div>
   </div>
 
@@ -84,7 +84,7 @@
 
   <div class="panel-section">
     <div class="panel-section-label">Create</div>
-    <div class="panel-section-note">Build your atlas directly on the map, then refine or clear it from here.</div>
+    <div class="panel-section-note" id="createSectionNote">Build your atlas directly on the map, then refine or clear it from here.</div>
     <button class="btn btn-primary" id="drawRouteBtn" disabled="">
       <i class="fa-solid fa-route"></i>
       <span id="drawRouteLabel">Chart route</span>
@@ -97,10 +97,10 @@
 
   <div class="panel-section">
     <div class="panel-section-label">Explore</div>
-    <div class="panel-section-note">Jump to saved ports or measure straight-line distances across the current view.</div>
+    <div class="panel-section-note">Search your saved locations or measure straight-line distances across the current view.</div>
     <button class="btn" id="findPortBtn">
       <i class="fa-solid fa-magnifying-glass-location"></i>
-      Find port
+      <span id="findSavedLabel">Find saved location</span>
     </button>
     <button class="btn" id="measureBtn">
       <i class="fa-solid fa-ruler"></i>
@@ -196,7 +196,7 @@
 <!-- Name input modal -->
 <div class="modal-backdrop" id="nameModal">
   <div class="modal">
-    <h3>Name this Port</h3>
+    <h3 id="nameModalTitle">Name this Port</h3>
     <div class="modal-sub">Lat <span id="modalLat">—</span> • Lng <span id="modalLng">—</span></div>
     <input id="portNameInput" type="text" placeholder="e.g. Port of Lisbon" autocomplete="off">
     <span class="field-label">Point Icon</span>
@@ -221,7 +221,7 @@
     <h3 id="portModalTitle">Port Details</h3>
     <div class="modal-sub" id="portModalSub">—</div>
 
-    <span class="field-label">Port Name</span>
+    <span class="field-label" id="portNameFieldLabel">Port Name</span>
     <input id="portEditName" type="text" autocomplete="off">
 
     <span class="field-label">Point Icon</span>
@@ -240,7 +240,7 @@
 
     <div class="modal-actions">
       <button class="btn btn-danger" id="portDeleteBtn" style="margin-right:auto;">
-        <i class="fa-solid fa-trash"></i> Delete Port
+        <i class="fa-solid fa-trash"></i> <span id="deletePointLabel">Delete Port</span>
       </button>
       <button class="btn" id="portCancelBtn" style="background:transparent; color:var(--ink-soft);">
         <i class="fa-solid fa-xmark"></i> Cancel
@@ -303,9 +303,9 @@
 <!-- Port search modal -->
 <div class="modal-backdrop" id="searchModal">
   <div class="modal" style="min-width: 360px; max-width: 520px;">
-    <h3>Find a Port</h3>
-    <div class="modal-sub">Jump directly to a named harbor in the atlas</div>
-    <input id="portSearchInput" type="text" placeholder="Search by port name or notes" autocomplete="off">
+    <h3 id="searchModalTitle">Find a Saved Location</h3>
+    <div class="modal-sub" id="searchModalSub">Search the locations already in this atlas and jump to one quickly</div>
+    <input id="portSearchInput" type="text" placeholder="Search by name or notes" autocomplete="off">
     <div class="search-results" id="portSearchResults"></div>
     <div class="modal-actions">
       <button class="btn" id="searchCloseBtn" style="background:transparent; color:var(--ink-soft);">
@@ -357,6 +357,14 @@
 
     <div class="settings-section">
       <div class="settings-grid">
+        <div class="settings-field">
+          <label for="atlasModeSelect">Map Mode</label>
+          <select id="atlasModeSelect">
+            <option value="maritime">Maritime</option>
+            <option value="pins">Pins</option>
+            <option value="connections">Connections</option>
+          </select>
+        </div>
         <div class="settings-field">
           <label for="themeModeSelect">Theme Mode</label>
           <select id="themeModeSelect">
@@ -443,36 +451,37 @@
 
     <div style="margin-top: 20px; max-height: 60vh; overflow-y: auto; padding-right: 8px;">
       <div class="help-section">
-        <div class="help-title"><i class="fa-solid fa-anchor"></i> Adding Ports</div>
+        <div class="help-title"><i class="fa-solid fa-anchor"></i> Adding Points</div>
         <div class="help-text">
-          • Click anywhere on the map to anchor a new port<br>
+          • Click anywhere on the map to anchor a new port or location<br>
           • Enter a name in the dialog (or leave blank for auto-numbering)<br>
           • Choose a point icon and color while creating the point, or refine them later in details<br>
-          • Ports display with permanent labels showing their names<br>
-          • Click any port to edit its details, add notes, or delete it
+          • Saved points display with permanent labels showing their names<br>
+          • Click any point to edit its details, add notes, or delete it
         </div>
       </div>
 
       <div class="help-section">
-        <div class="help-title"><i class="fa-solid fa-route"></i> Drawing Sea Routes</div>
+        <div class="help-title"><i class="fa-solid fa-route"></i> Routes and Connections</div>
         <div class="help-text">
-          • Wait for "Sea charts ready" to appear in the sidebar<br>
-          • Click <strong>Chart route</strong> in the Create section<br>
+          • In <strong>Maritime</strong> mode, wait for "Sea charts ready" to appear, then click <strong>Chart route</strong><br>
           • Click two ports to chart a maritime route between them<br>
           • The app uses A* pathfinding to plot realistic sea routes that avoid land masses and navigate through straits (Panama, Suez, Gibraltar, etc.)<br>
-          • If two significantly different routes exist, you'll be prompted to choose your preferred course<br>
-          • Routes show distance in km and nautical miles when clicked
+          • If two significantly different maritime routes exist, you'll be prompted to choose your preferred course<br>
+          • In <strong>Connections</strong> mode, click <strong>Add connection</strong> and choose any two saved locations<br>
+          • Routes and connections both show distance in km and nautical miles when clicked
         </div>
       </div>
 
       <div class="help-section">
-        <div class="help-title"><i class="fa-solid fa-note-sticky"></i> Port Info Bubbles</div>
+        <div class="help-title"><i class="fa-solid fa-note-sticky"></i> Point Info Bubbles</div>
         <div class="help-text">
-          • Click any port to open its details<br>
+          • Click any point to open its details<br>
           • Add notes in the "Notes &amp; Cargo" field (cargo manifest, hazards, weather, etc.)<br>
           • Check <strong>"Display info bubble on map"</strong> to show a callout<br>
-          • The bubble appears as a draggable callout anchored back to the point so it reads like an annotation, not a floating card<br>
-          • <strong>Drag the bubble</strong> to reposition it anywhere on the map<br>
+          • The bubble appears as a callout anchored to the point so it reads like an annotation, not a floating card<br>
+          • <strong>Drag the bubble</strong> to reposition it relative to the point and keep important map details visible<br>
+          • Use the small handle in the lower-right corner to make the bubble wider when you want a shorter, less vertical note<br>
           • Uncheck the box and save to hide the bubble
         </div>
       </div>
@@ -480,8 +489,8 @@
       <div class="help-section">
         <div class="help-title"><i class="fa-solid fa-compass-drafting"></i> Navigator Tools</div>
         <div class="help-text">
-          • Use <strong>Find port</strong> in the Explore section to search by port name or saved notes<br>
-          • Selecting a match jumps the map to that port and briefly highlights it<br>
+          • Use <strong>Find a saved location</strong> in the Explore section to search by name or notes in this atlas<br>
+          • Selecting a match jumps the map to that point and briefly highlights it<br>
           • Click <strong>Measure distance</strong> to start the straight-line ruler<br>
           • Click any two points on the map to measure great-circle distance in km and nautical miles<br>
           • Measurements are visual aids only and are not included in JSON exports
@@ -493,7 +502,7 @@
         <div class="help-text">
           • Click <strong>Export PNG</strong> in the Save &amp; Share section<br>
           • PNG exports now capture <strong>only the map view</strong>, without the studio sidebar<br>
-          • Capture either the current viewport or automatically fit all ports, labels, bubbles, and routes into frame<br>
+          • Capture either the current viewport or automatically fit all saved points, labels, bubbles, and routes into frame<br>
           • Pick standard, high, or ultra output quality depending on how heavy you want the file to be<br>
           • The PNG is saved with a timestamp: <code>open-atlas-YYYY-MM-DD...</code><br>
           • High-resolution output suitable for printing or sharing
@@ -513,7 +522,7 @@
         <div class="help-title"><i class="fa-solid fa-file-export"></i> Exporting as JSON</div>
         <div class="help-text">
           • Click <strong>Export JSON</strong> to save your entire atlas<br>
-          • The JSON file includes all ports (names, coordinates, notes, icons, colors, bubble positions), all routes (exact paths, distances), and the current map view<br>
+          • The JSON file includes all saved points (names, coordinates, notes, icons, colors, bubble positions), all routes or connections (exact paths, distances), and the current map view<br>
           • Save this file to back up your work or share it with others<br>
           • Filename format: <code>open-atlas-YYYY-MM-DD...</code>
         </div>
@@ -523,7 +532,7 @@
         <div class="help-title"><i class="fa-solid fa-layer-group"></i> Exporting as GeoJSON</div>
         <div class="help-text">
           • Click <strong>Export GeoJSON</strong> to create an interoperable map data file<br>
-          • Ports become point features and routes become line features<br>
+          • Saved points become point features and routes or connections become line features<br>
           • GeoJSON is ideal for GIS tools, notebooks, or downstream custom workflows<br>
           • The file also carries atlas metadata and theme settings
         </div>
@@ -534,9 +543,9 @@
         <div class="help-text">
           • Click <strong>Import atlas</strong> and select a previously exported atlas file<br>
           • The current map will be cleared and replaced with the imported data<br>
-          • All ports, routes, notes, and bubble positions are restored exactly as saved<br>
+          • All saved points, routes or connections, notes, and bubble positions are restored exactly as saved<br>
           • The camera view (zoom and center) is also restored<br>
-          • Use this to continue working on a saved atlas or load someone else's routes
+          • Use this to continue working on a saved atlas or load someone else's map
         </div>
       </div>
 
@@ -544,6 +553,7 @@
         <div class="help-title"><i class="fa-solid fa-sliders"></i> Studio Settings</div>
         <div class="help-text">
           • Open <strong>Appearance</strong> in the Workspace section to tune fonts, colors, theme mode, and the basemap style<br>
+          • Use <strong>Map Mode</strong> to switch between maritime routing, location-only pins, and straight-line connections<br>
           • Choose <strong>Presentation Flat</strong> when you want a cleaner editorial export with custom sea and land colors<br>
           • The live preview card shows how your title, palette, and typography will read before you export<br>
           • Atlas title and subtitle are part of your saved JSON and GeoJSON metadata<br>
@@ -556,7 +566,7 @@
         <div class="help-text">
           • Use <strong>Undo</strong> and <strong>Redo</strong> in the Workspace section to step through atlas edits<br>
           • Keyboard shortcuts: <strong>Cmd/Ctrl+Z</strong> to undo, <strong>Shift+Cmd/Ctrl+Z</strong> or <strong>Ctrl+Y</strong> to redo<br>
-          • Imports, port edits, route changes, and visual settings all participate in history
+          • Imports, point edits, route changes, and visual settings all participate in history
         </div>
       </div>
 
@@ -565,12 +575,12 @@
         <div class="help-text">
           • Use the collapse button in the studio header to tuck the panel away, then reopen it from the same edge of the screen<br>
           • On phones and tablets, the studio behaves like a bottom sheet so the map stays usable without losing the controls<br>
-          • The three workflow chips near the top of the sidebar guide you through adding ports, charting routes, and exporting assets<br>
-          • Routes use real maritime pathfinding — expect ships to navigate around continents and through major canals<br>
+          • The three workflow chips near the top of the sidebar guide you through adding points, linking them when relevant, and exporting assets<br>
+          • Maritime routes use real pathfinding around continents and through major canals, while Connections mode keeps links straight and lightweight<br>
           • Press <strong>Esc</strong> to close any open modal<br>
           • Press <strong>Esc</strong> while drawing or measuring to cancel the active tool<br>
-          • Deleting a port also removes any routes connected to it<br>
-          • Info bubbles stay anchored to their ports when dragged — perfect for annotation workflows<br>
+          • Deleting a point also removes any routes or connections attached to it<br>
+          • Info bubbles stay anchored to their points when dragged or widened — perfect for annotation workflows<br>
           • Light/dark mode follows your system preference automatically
         </div>
       </div>

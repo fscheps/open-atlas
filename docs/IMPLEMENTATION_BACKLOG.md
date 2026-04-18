@@ -9,6 +9,18 @@ Rules for working this backlog:
 - avoid large refactors unless a task explicitly asks for one
 - preserve static hosting compatibility
 
+Current completion snapshot:
+
+- `B1`, `B2`, `B3`, and `B4` are now live:
+  - mode selector
+  - pins mode
+  - mode-aware copy
+  - straight-line connections mode
+- `C1`, `C2`, and `C3` (presentation style + sea/land controls) are already live and should be treated as complete.
+- `B8` search copy cleanup is now implemented.
+- `C4` annotation contrast and placement cleanup is now live with draggable/resizable callouts.
+- Remaining tasks keep the same IDs and are still open.
+
 ## Track A: Open-source transparency
 
 ### A1. Add `ATTRIBUTION.md`
@@ -650,34 +662,33 @@ Acceptance criteria:
 
 ## Recommended execution order
 
-1. A1
-2. A2
-3. A4
-4. A5
-5. B1
-6. B2
-7. B3
-8. C1
-9. C2
-10. C3
-11. D1
-12. B4
-13. B5
-14. B8
-15. D4
-16. C1
-17. C2
-18. C3
+1. B8
+2. A1
+3. A2
+4. A3
+5. A4
+6. A5
+7. D4
+8. B1
+9. B2
+10. B3
+11. B4
+12. B5
+13. B6
+14. B7
+15. B9
+16. I1
+17. I2
+18. I3
 19. D1
-20. B6
-21. B7
-22. B4
-23. B5
-24. I1
-25. I2
-26. I3
-27. F1
-28. F3
-29. F4
-30. E1
-31. G1
+20. D2
+21. D3
+22. F1
+23. F2
+24. F3
+25. F4
+26. E1
+27. E2
+28. E3
+29. G1
+30. G2

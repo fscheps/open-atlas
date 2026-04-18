@@ -1,13 +1,15 @@
 # Open Atlas
 
-Open Atlas is a static, open-source maritime route-mapping app built for easy sharing and zero-backend hosting.
+Open Atlas is a static, open-source map storytelling app built for easy sharing and zero-backend hosting.
 
 ![Open Atlas screenshot](assets/open-atlas-verification.png)
 
 ## What it does
 
-- Place ports directly on the map
+- Place ports or locations directly on the map
+- Switch between `Maritime`, `Pins`, and `Connections` map modes
 - Draw sea routes that avoid land using client-side pathfinding
+- Draw straight visual connections for network and flight-style maps
 - Choose point icons and per-point colors for clearer map storytelling
 - Use the studio comfortably on desktop, tablet, and mobile layouts
 - Save and reopen atlases as JSON for continued editing
@@ -23,7 +25,7 @@ Open Atlas is a static, open-source maritime route-mapping app built for easy sh
 
 Open Atlas is designed for a simple workflow:
 
-1. Create ports and routes.
+1. Create ports, locations, or connections depending on the chosen mode.
 2. Tweak the visual identity in `Studio Settings`.
 3. Let the in-browser draft system keep your latest working state close at hand.
 4. Export JSON as the editable master file.
@@ -83,8 +85,8 @@ Recommended setup:
 JSON exports are the editable source of truth for the app. They include:
 
 - map view
-- ports
-- routes
+- ports or locations
+- routes or connections
 - current visual settings
 
 Draft autosaves reuse the same atlas shape and live only in the browser via `localStorage`.
@@ -93,8 +95,8 @@ The app now writes the canonical `open-atlas` JSON format and still accepts the 
 
 GeoJSON exports are for interoperability. They include:
 
-- point features for ports
-- line features for routes
+- point features for ports or locations
+- line features for routes or connections
 - atlas metadata and theme settings
 
 ## Contributing

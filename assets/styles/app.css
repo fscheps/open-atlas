@@ -552,87 +552,76 @@
   .port-label::before { display: none !important; }
 
   /* Info bubble - callout style with pointer */
-  .bubble-marker { background: transparent !important; border: none !important; }
-  .bubble-shell {
-    position: relative;
-    width: 0;
-    height: 0;
-    --bubble-accent: var(--accent);
+  .bubble-marker {
+    background: transparent !important;
+    border: none !important;
+    overflow: visible !important;
   }
-  .bubble-tip-dot {
+  .bubble-hitbox {
+    position: relative;
+    width: 720px;
+    height: 520px;
+    overflow: visible;
+    pointer-events: auto;
+  }
+  .bubble-shell {
     position: absolute;
-    left: -5px;
-    top: -5px;
-    width: 10px;
-    height: 10px;
-    border-radius: 999px;
-    background: var(--bubble-accent);
-    border: 2px solid var(--label-bg);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+    left: 360px;
+    top: 260px;
+    width: 1px;
+    height: 1px;
+    overflow: visible;
+    pointer-events: auto;
+    --bubble-accent: var(--accent);
+    --bubble-offset-x: 52px;
+    --bubble-offset-y: -122px;
+    --bubble-width: 236px;
+    --bubble-min-height: 150px;
+  }
+  .bubble-shell .info-bubble {
+    pointer-events: auto;
+    z-index: 2;
+  }
+  .bubble-tail-svg {
+    position: absolute;
+    overflow: visible;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .bubble-tail-svg path {
+    fill: var(--label-bg);
+    stroke: rgba(118, 138, 156, 0.34);
+    stroke-width: 1.4;
+    filter: drop-shadow(0 7px 14px rgba(0,0,0,0.12));
   }
   .info-bubble {
     position: absolute;
-    left: 18px;
-    bottom: 18px;
+    left: var(--bubble-offset-x);
+    top: var(--bubble-offset-y);
+    width: var(--bubble-width);
     background: var(--label-bg);
     color: var(--label-ink);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px 16px 12px 16px;
+    border-radius: 18px;
+    padding: 14px 18px 18px 18px;
     font-family: var(--font-body);
     font-size: 15px;
     line-height: 1.4;
-    max-width: 260px;
-    min-width: 140px;
+    min-width: 168px;
+    max-width: 360px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.25);
     cursor: move;
     position: relative;
+    min-height: var(--bubble-min-height);
     white-space: pre-wrap;
     word-wrap: break-word;
     backdrop-filter: blur(3px);
-  }
-  .bubble-shell.align-left .info-bubble {
-    left: auto;
-    right: 18px;
-  }
-  /* Triangular pointer */
-  .info-bubble::before {
-    content: '';
-    position: absolute;
-    bottom: -11px;
-    left: 16px;
-    width: 0;
-    height: 0;
-    border-left: 12px solid transparent;
-    border-right: 12px solid transparent;
-    border-top: 12px solid var(--label-bg);
-    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.15));
-  }
-  .bubble-shell.align-left .info-bubble::before {
-    left: auto;
-    right: 16px;
-  }
-  /* Pointer border outline */
-  .info-bubble::after {
-    content: '';
-    position: absolute;
-    bottom: -12px;
-    left: 15px;
-    width: 0;
-    height: 0;
-    border-left: 13px solid transparent;
-    border-right: 13px solid transparent;
-    border-top: 13px solid var(--border);
-    z-index: -1;
-  }
-  .bubble-shell.align-left .info-bubble::after {
-    left: auto;
-    right: 15px;
+    touch-action: none;
   }
   .info-bubble .bubble-handle {
     position: absolute;
-    top: 6px;
-    right: 8px;
+    top: 8px;
+    right: 11px;
     font-family: var(--font-ui);
     font-size: 8px;
     letter-spacing: 1px;
@@ -649,6 +638,24 @@
     color: var(--bubble-accent);
     margin-bottom: 6px;
     font-weight: 600;
+  }
+  .bubble-body {
+    padding-right: 18px;
+  }
+  .bubble-resize {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background:
+      linear-gradient(135deg, transparent 0 42%, rgba(0,0,0,0.18) 42% 52%, transparent 52% 100%),
+      linear-gradient(135deg, transparent 0 62%, rgba(0,0,0,0.28) 62% 72%, transparent 72% 100%);
+    cursor: nwse-resize;
+    opacity: 0.72;
+    touch-action: none;
+    z-index: 3;
   }
 
   .icon-picker-grid {
@@ -883,12 +890,14 @@
   .modal-backdrop {
     position: fixed;
     inset: 0;
+    padding: 20px 16px;
     background: rgba(12, 24, 33, 0.6);
     backdrop-filter: blur(3px);
     z-index: 2000;
     display: none;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
+    overflow-y: auto;
     animation: fadeIn 0.2s ease;
   }
   .modal-backdrop.show { display: flex; }
@@ -904,7 +913,11 @@
     border-radius: 24px;
     padding: 28px;
     min-width: 320px;
+    width: min(720px, calc(100vw - 32px));
     max-width: 90vw;
+    max-height: calc(100vh - 40px);
+    margin: auto 0;
+    overflow-y: auto;
     box-shadow: var(--shadow);
     animation: slideUp 0.25s ease;
     backdrop-filter: blur(18px);

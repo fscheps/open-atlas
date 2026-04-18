@@ -31,17 +31,32 @@
 
   map.createPane('presentationLand');
   map.getPane('presentationLand').style.zIndex = 250;
-  map.createPane('bubbleConnectors');
-  map.getPane('bubbleConnectors').style.zIndex = 430;
+  const BUBBLE_DEFAULT_WIDTH = 236;
+  const BUBBLE_MIN_WIDTH = 168;
+  const BUBBLE_MAX_WIDTH = 360;
+  const BUBBLE_DEFAULT_RIGHT_OFFSET = 76;
+  const BUBBLE_DEFAULT_LEFT_GAP = 56;
+  const BUBBLE_DEFAULT_TOP_OFFSET = -104;
+  const BUBBLE_DEFAULT_BOTTOM_OFFSET = 24;
+  const BUBBLE_HITBOX_WIDTH = 720;
+  const BUBBLE_HITBOX_HEIGHT = 520;
+  const BUBBLE_HITBOX_ANCHOR_X = 360;
+  const BUBBLE_HITBOX_ANCHOR_Y = 260;
+  const BUBBLE_OFFSET_X_RIGHT_MAX = 320;
+  const BUBBLE_OFFSET_X_LEFT_MIN = -360;
+  const BUBBLE_OFFSET_Y_MIN = -210;
+  const BUBBLE_OFFSET_Y_MAX = 140;
+  const BUBBLE_LEGACY_DISTANCE_LIMIT = 250;
 
   function refreshPresentationLayerStyle() {
     if (!presentationLandLayer) return;
     presentationLandLayer.setStyle({
       fillColor: settings.landColor,
       fillOpacity: 1,
-      color: tintHex(settings.landColor, -0.18),
-      opacity: 0.72,
-      weight: 0.8,
+      color: 'transparent',
+      opacity: 0,
+      weight: 0,
+      stroke: false,
       className: 'presentation-land'
     });
   }
@@ -113,8 +128,14 @@
   const workflowPortsBtn = document.getElementById('workflowPortsBtn');
   const workflowRoutesBtn = document.getElementById('workflowRoutesBtn');
   const workflowExportBtn = document.getElementById('workflowExportBtn');
+  const panelIntroText = document.getElementById('panelIntroText');
+  const pointCountLabel = document.getElementById('pointCountLabel');
+  const routeCountLabel = document.getElementById('routeCountLabel');
+  const createSectionNote = document.getElementById('createSectionNote');
+  const findSavedLabel = document.getElementById('findSavedLabel');
 
   const nameModal = document.getElementById('nameModal');
+  const nameModalTitle = document.getElementById('nameModalTitle');
   const portNameInput = document.getElementById('portNameInput');
   const modalLat = document.getElementById('modalLat');
   const modalLng = document.getElementById('modalLng');
@@ -129,6 +150,8 @@
   const routeChoiceCancel = document.getElementById('routeChoiceCancel');
 
   const searchModal = document.getElementById('searchModal');
+  const searchModalTitle = document.getElementById('searchModalTitle');
+  const searchModalSub = document.getElementById('searchModalSub');
   const portSearchInput = document.getElementById('portSearchInput');
   const portSearchResults = document.getElementById('portSearchResults');
   const searchCloseBtn = document.getElementById('searchCloseBtn');
@@ -140,6 +163,7 @@
   const settingsModal = document.getElementById('settingsModal');
   const settingsTitleInput = document.getElementById('settingsTitleInput');
   const settingsSubtitleInput = document.getElementById('settingsSubtitleInput');
+  const atlasModeSelect = document.getElementById('atlasModeSelect');
   const themeModeSelect = document.getElementById('themeModeSelect');
   const mapStyleSelect = document.getElementById('mapStyleSelect');
   const displayFontSelect = document.getElementById('displayFontSelect');
@@ -163,6 +187,8 @@
   const previewAltRouteSwatch = document.getElementById('previewAltRouteSwatch');
   const previewSeaSwatch = document.getElementById('previewSeaSwatch');
   const previewLandSwatch = document.getElementById('previewLandSwatch');
+  const portNameFieldLabel = document.getElementById('portNameFieldLabel');
+  const deletePointLabel = document.getElementById('deletePointLabel');
 
   let pendingLatLng = null;
   let isPlottingRoute = false;
@@ -175,7 +201,7 @@
   const ATLAS_FORMAT = 'open-atlas';
   const LEGACY_ATLAS_FORMAT = 'mariners-atlas';
   const ATLAS_GEOJSON_FORMAT = 'open-atlas-geojson';
-  const ATLAS_VERSION = 3;
+  const ATLAS_VERSION = 4;
   const SETTINGS_STORAGE_KEY = 'open-atlas-settings-v2';
   const LEGACY_SETTINGS_STORAGE_KEY = 'mariners-atlas-settings-v1';
   const DRAFT_STORAGE_KEY = 'open-atlas-draft-v2';
@@ -290,6 +316,7 @@
   const DEFAULT_SETTINGS = {
     atlasTitle: 'Open Atlas',
     atlasSubtitle: 'Map Studio',
+    atlasMode: 'maritime',
     themeMode: 'light',
     mapStyle: 'positron',
     displayFont: 'fraunces',
@@ -316,6 +343,8 @@
   let historySuspended = 0;
   let historyStack = [];
   let historyIndex = -1;
+
+  const ATLAS_MODES = ['maritime', 'pins', 'connections'];
 
   function updateStats() {
     portCountEl.textContent = markers.length;
@@ -374,6 +403,99 @@
     return /^#[0-9a-f]{6}$/i.test(String(color || '')) ? String(color) : settings.markerColor || DEFAULT_SETTINGS.markerColor;
   }
 
+  function normalizeAtlasMode(mode) {
+    return ATLAS_MODES.includes(mode) ? mode : DEFAULT_SETTINGS.atlasMode;
+  }
+
+  function getAtlasMode() {
+    return normalizeAtlasMode(settings.atlasMode);
+  }
+
+  function isPinsMode() {
+    return getAtlasMode() === 'pins';
+  }
+
+  function isConnectionsMode() {
+    return getAtlasMode() === 'connections';
+  }
+
+  function getModeCopy() {
+    const mode = getAtlasMode();
+    if (mode === 'pins') {
+      return {
+        mode,
+        pointSingular: 'Location',
+        pointPlural: 'Locations',
+        nameAction: 'Name this Location',
+        pointPlaceholder: 'e.g. Buenos Aires',
+        findSavedLabel: 'Find saved location',
+        searchTitle: 'Find a Saved Location',
+        searchSubtitle: 'Search the locations already in this map and jump to one quickly',
+        searchEmpty: 'No matching locations in the current map.',
+        workflowPoints: '1 Add locations',
+        workflowRoutes: '2 Connections off',
+        routesLabel: 'Routes',
+        intro: 'Click anywhere on the map to add locations, then annotate, save, and share your map.',
+        createNote: 'Pins mode keeps this map location-only so you can focus on places, labels, and callouts.',
+        drawIdle: 'Connections off in Pins mode',
+        drawActive: 'Connections off in Pins mode',
+        drawHint: 'Pins mode keeps this atlas location-only.',
+        selectionFirst: 'Focus on placing and annotating locations in Pins mode.',
+        selectionRepeat: 'Pins mode does not chart routes or connections.',
+        chartButtonLabel: 'Connections off',
+        deleteLabel: 'Delete Location'
+      };
+    }
+    if (mode === 'connections') {
+      return {
+        mode,
+        pointSingular: 'Location',
+        pointPlural: 'Locations',
+        nameAction: 'Name this Location',
+        pointPlaceholder: 'e.g. Madrid',
+        findSavedLabel: 'Find saved location',
+        searchTitle: 'Find a Saved Location',
+        searchSubtitle: 'Search the locations already in this map and jump to one quickly',
+        searchEmpty: 'No matching locations in the current map.',
+        workflowPoints: '1 Add locations',
+        workflowRoutes: '2 Connect points',
+        routesLabel: 'Connections',
+        intro: 'Click anywhere on the map to add locations, then connect, annotate, save, and share your map.',
+        createNote: 'Connections mode links saved locations with clean straight-line visuals for network and flight-style maps.',
+        drawIdle: 'Add connection',
+        drawActive: 'Cancel connection',
+        drawHint: 'Click two locations to add a straight connection.',
+        selectionFirst: 'Start point: ',
+        selectionRepeat: 'Location deselected. Choose another location to continue.',
+        chartButtonLabel: 'Add connection',
+        deleteLabel: 'Delete Location'
+      };
+    }
+    return {
+      mode,
+      pointSingular: 'Port',
+      pointPlural: 'Ports',
+      nameAction: 'Name this Port',
+      pointPlaceholder: 'e.g. Port of Lisbon',
+      findSavedLabel: 'Find saved port',
+      searchTitle: 'Find a Saved Port',
+      searchSubtitle: 'Search the ports already in this atlas and jump to one quickly',
+      searchEmpty: 'No matching ports in the current atlas.',
+      workflowPoints: '1 Add ports',
+      workflowRoutes: '2 Chart paths',
+      routesLabel: 'Routes',
+      intro: 'Click anywhere on the map to add ports, then use the tools here to chart, annotate, save, and share your atlas.',
+      createNote: 'Build your atlas directly on the map, then refine or clear it from here.',
+      drawIdle: 'Chart route',
+      drawActive: 'Cancel route',
+      drawHint: 'Click two ports to chart a sea route.',
+      selectionFirst: 'Origin: ',
+      selectionRepeat: 'Port deselected. Choose a port to continue.',
+      chartButtonLabel: 'Chart route',
+      deleteLabel: 'Delete Port'
+    };
+  }
+
   function getPointIcon(iconKey) {
     return POINT_ICON_OPTIONS.find((option) => option.key === normalizePointIcon(iconKey)) || POINT_ICON_OPTIONS[0];
   }
@@ -384,6 +506,50 @@
       iconKey: normalizePointIcon(source.iconKey),
       markerColor: normalizePointColor(source.markerColor)
     };
+  }
+
+  function normalizeBubbleWidth(value) {
+    return Number.isFinite(value) ? Math.round(clamp(value, BUBBLE_MIN_WIDTH, BUBBLE_MAX_WIDTH)) : null;
+  }
+
+  function estimateBubbleWidth(name, details) {
+    const content = `${name || ''}\n${details || ''}`.trim();
+    const longestLine = content
+      .split('\n')
+      .reduce((max, line) => Math.max(max, line.trim().length), 0);
+    const estimated = 184 + longestLine * 3.2;
+    return normalizeBubbleWidth(estimated) || BUBBLE_DEFAULT_WIDTH;
+  }
+
+  function normalizeBubbleOffset(offset) {
+    if (!offset || !Number.isFinite(offset.x) || !Number.isFinite(offset.y)) return null;
+    return {
+      x: Math.round(clamp(offset.x, BUBBLE_OFFSET_X_LEFT_MIN, BUBBLE_OFFSET_X_RIGHT_MAX)),
+      y: Math.round(clamp(offset.y, BUBBLE_OFFSET_Y_MIN, BUBBLE_OFFSET_Y_MAX))
+    };
+  }
+
+  function defaultBubbleOffset(portLatLng, width = BUBBLE_DEFAULT_WIDTH) {
+    const markerPoint = map.latLngToContainerPoint(portLatLng);
+    const mapSize = map.getSize();
+    const placeRight = mapSize.x - markerPoint.x >= markerPoint.x;
+    return normalizeBubbleOffset({
+      x: placeRight ? BUBBLE_DEFAULT_RIGHT_OFFSET : -(width + BUBBLE_DEFAULT_LEFT_GAP),
+      y: markerPoint.y < 170 ? BUBBLE_DEFAULT_BOTTOM_OFFSET : BUBBLE_DEFAULT_TOP_OFFSET
+    });
+  }
+
+  function bubbleOffsetFromLegacyLatLng(portLatLng, bubbleLatLng, width = BUBBLE_DEFAULT_WIDTH) {
+    if (!bubbleLatLng) return null;
+    const markerPoint = map.latLngToContainerPoint(portLatLng);
+    const bubblePoint = map.latLngToContainerPoint(bubbleLatLng);
+    const placeRight = bubblePoint.x >= markerPoint.x;
+    const offset = normalizeBubbleOffset({
+      x: bubblePoint.x - markerPoint.x + (placeRight ? 18 : -(width - 18)),
+      y: bubblePoint.y - markerPoint.y - 10
+    });
+    if (!offset) return null;
+    return Math.hypot(offset.x, offset.y) > BUBBLE_LEGACY_DISTANCE_LIMIT ? null : offset;
   }
 
   function isSupportedAtlasFormat(format) {
@@ -613,11 +779,11 @@
     const exportOpen = typeof exportModal !== 'undefined' && exportModal.classList.contains('show');
     const activeStep = exportOpen || routes.length
       ? 'export'
-      : (drawMode || markers.length >= 2 ? 'routes' : 'ports');
+      : (isPinsMode() ? 'ports' : (drawMode || markers.length >= 2 ? 'routes' : 'ports'));
 
     [
       [workflowPortsBtn, activeStep === 'ports'],
-      [workflowRoutesBtn, activeStep === 'routes'],
+      [workflowRoutesBtn, !isPinsMode() && activeStep === 'routes'],
       [workflowExportBtn, activeStep === 'export']
     ].forEach(([button, active]) => {
       button.classList.toggle('is-active', active);
@@ -705,6 +871,7 @@
   function refreshSettingsForm() {
     settingsTitleInput.value = settings.atlasTitle;
     settingsSubtitleInput.value = settings.atlasSubtitle;
+    atlasModeSelect.value = getAtlasMode();
     themeModeSelect.value = settings.themeMode;
     mapStyleSelect.value = settings.mapStyle;
     displayFontSelect.value = settings.displayFont;
@@ -720,6 +887,7 @@
   }
 
   function refreshSettingsPreview() {
+    const copy = getModeCopy();
     settingsPreviewTitle.textContent = settings.atlasTitle || DEFAULT_SETTINGS.atlasTitle;
     settingsPreviewSubtitle.textContent = settings.atlasSubtitle || DEFAULT_SETTINGS.atlasSubtitle;
     settingsPreviewTitle.style.fontFamily = FONT_STACKS[settings.displayFont] || FONT_STACKS.fraunces;
@@ -733,8 +901,29 @@
     previewSeaSwatch.style.background = settings.seaColor;
     previewLandSwatch.style.background = settings.landColor;
     settingsPreviewNote.textContent = settings.mapStyle === 'presentation'
-      ? 'Presentation Flat uses your custom sea and land palette for quieter, branded exports.'
+      ? `Presentation Flat uses your custom sea and land palette for quieter ${copy.mode === 'maritime' ? 'atlas' : 'map'} exports.`
       : 'Tile basemaps keep geographic labels while your overlays inherit the palette and type choices.';
+  }
+
+  function refreshModeUi() {
+    const copy = getModeCopy();
+    panelIntroText.textContent = copy.intro;
+    workflowPortsBtn.textContent = copy.workflowPoints;
+    workflowRoutesBtn.textContent = copy.workflowRoutes;
+    pointCountLabel.textContent = copy.pointPlural;
+    routeCountLabel.textContent = copy.routesLabel;
+    createSectionNote.textContent = copy.createNote;
+    findSavedLabel.textContent = copy.findSavedLabel;
+    nameModalTitle.textContent = copy.nameAction;
+    portNameInput.placeholder = copy.pointPlaceholder;
+    portNameFieldLabel.textContent = `${copy.pointSingular} Name`;
+    deletePointLabel.textContent = copy.deleteLabel;
+    searchModalTitle.textContent = copy.searchTitle;
+    searchModalSub.textContent = copy.searchSubtitle;
+    workflowRoutesBtn.hidden = isPinsMode();
+    drawBtn.hidden = isPinsMode();
+    drawBtn.disabled = isPinsMode();
+    drawLabel.textContent = drawMode ? copy.drawActive : copy.drawIdle;
   }
 
   function renderIconPicker(container, selectedIconKey, onSelect) {
@@ -784,7 +973,11 @@
   function applySettings(nextSettings, opts) {
     const options = opts || {};
     const previousSettings = { ...settings };
-    settings = { ...settings, ...nextSettings };
+    settings = {
+      ...settings,
+      ...nextSettings,
+      atlasMode: normalizeAtlasMode(nextSettings && nextSettings.atlasMode !== undefined ? nextSettings.atlasMode : settings.atlasMode)
+    };
     refreshThemeMode();
     document.documentElement.style.setProperty('--font-display', FONT_STACKS[settings.displayFont] || FONT_STACKS.cormorant);
     document.documentElement.style.setProperty('--font-body', FONT_STACKS[settings.bodyFont] || FONT_STACKS.cormorant);
@@ -811,8 +1004,17 @@
     loaderTitle.textContent = settings.atlasTitle;
     refreshPresentationLayerStyle();
     setBaseMap(settings.mapStyle);
+    if (isPinsMode() && drawMode) {
+      drawMode = false;
+      selectedForRoute = [];
+      refreshMarkerVisuals();
+      hideHint();
+    }
     refreshSettingsForm();
+    refreshModeUi();
     refreshRouteLayers();
+    syncActionState();
+    refreshWorkflowState();
     if (options.persist !== false) saveStoredSettings();
     if (options.recordDraft !== false) scheduleDraftSave();
     if (options.recordHistory !== false) scheduleHistorySnapshot();
@@ -825,11 +1027,16 @@
 
   function closeSettingsModal() {
     settingsModal.classList.remove('show');
+    requestAnimationFrame(() => map.invalidateSize(false));
   }
 
   function syncActionState() {
     const routeChoiceOpen = routeChoiceModal.classList.contains('show');
-    drawBtn.disabled = !seaReady || isPlottingRoute || routeChoiceOpen;
+    const routeUnavailable = isPinsMode()
+      || isPlottingRoute
+      || routeChoiceOpen
+      || (!isConnectionsMode() && !seaReady);
+    drawBtn.disabled = routeUnavailable;
     findPortBtn.disabled = isPlottingRoute || routeChoiceOpen;
     measureBtn.disabled = isPlottingRoute || routeChoiceOpen;
   }
@@ -851,7 +1058,6 @@
     entry.marker.setIcon(makeIcon(entry));
     if (entry.bubbleVisible) {
       updateBubbleContent(entry);
-      refreshBubbleConnector(entry);
     }
   }
 
@@ -874,7 +1080,7 @@
   }
   function savePort() {
     if (!pendingLatLng) return;
-    const name = (portNameInput.value || '').trim() || `Port ${nextId}`;
+    const name = (portNameInput.value || '').trim() || `${getModeCopy().pointSingular} ${nextId}`;
     addMarker(pendingLatLng, name, pendingPointStyle);
     closeNameModal();
   }
@@ -900,9 +1106,16 @@
       markerColor: pointStyle.markerColor,
       details: opts.details || '',
       bubbleVisible: false,
-      bubbleLatLng: opts.bubbleLatLng ? L.latLng(opts.bubbleLatLng.lat, opts.bubbleLatLng.lng) : null,
-      bubble: null,
-      bubbleLine: null
+      bubbleWidth: normalizeBubbleWidth(opts.bubbleWidth) || estimateBubbleWidth(name, opts.details || ''),
+      bubbleOffset: normalizeBubbleOffset({
+        x: opts.bubbleOffsetX,
+        y: opts.bubbleOffsetY
+      }) || bubbleOffsetFromLegacyLatLng(
+        L.latLng(latlng.lat, latlng.lng),
+        opts.bubbleLatLng ? L.latLng(opts.bubbleLatLng.lat, opts.bubbleLatLng.lng) : null,
+        normalizeBubbleWidth(opts.bubbleWidth) || BUBBLE_DEFAULT_WIDTH
+      ),
+      bubble: null
     };
     marker.on('click', (ev) => {
       L.DomEvent.stopPropagation(ev);
@@ -1011,96 +1224,214 @@
   }
 
   /* ===== Info bubble ===== */
-  function defaultBubbleLatLng(portLatLng) {
-    const bounds = map.getBounds();
-    const latSpan = Math.max(0.3, (bounds.getNorth() - bounds.getSouth()) * 0.08);
-    const lngSpan = Math.max(0.4, (bounds.getEast() - bounds.getWest()) * 0.08);
-    const bubbleToRight = portLatLng.lng <= map.getCenter().lng;
-    return L.latLng(
-      portLatLng.lat + latSpan * 0.9,
-      portLatLng.lng + lngSpan * (bubbleToRight ? 1.6 : -1.6)
-    );
+  function getBubbleAlignment(entry) {
+    return (entry.bubbleOffset ? entry.bubbleOffset.x : 0) >= 0 ? 'right' : 'left';
   }
 
-  function getBubbleAlignment(entry) {
-    return entry.bubbleLatLng && entry.bubbleLatLng.lng < entry.latlng.lng ? 'left' : 'right';
+  function getBubbleWidth(entry) {
+    return normalizeBubbleWidth(entry.bubbleWidth) || BUBBLE_DEFAULT_WIDTH;
+  }
+
+  function getBubbleOffset(entry) {
+    const offset = normalizeBubbleOffset(entry.bubbleOffset);
+    if (!offset) return defaultBubbleOffset(entry.latlng, getBubbleWidth(entry));
+    return offset;
+  }
+
+  function estimateBubbleHeight(entry) {
+    const detailLines = String(entry.details || '')
+      .split('\n')
+      .reduce((count, line) => count + Math.max(1, Math.ceil(line.length / 22)), 0);
+    return clamp(116 + detailLines * 20, 132, 300);
+  }
+
+  function buildBubbleTailGeometry(offset, width, height) {
+    const rect = {
+      left: offset.x,
+      top: offset.y,
+      right: offset.x + width,
+      bottom: offset.y + height
+    };
+    const anchor = { x: 0, y: 0 };
+    const radius = 18;
+    const baseHalf = clamp(14, Math.min(width, height) * 0.12, 22);
+    let p1;
+    let p2;
+
+    if (anchor.x < rect.left) {
+      const cy = clamp(anchor.y, rect.top + radius + baseHalf, rect.bottom - radius - baseHalf);
+      p1 = { x: rect.left, y: cy - baseHalf };
+      p2 = { x: rect.left, y: cy + baseHalf };
+    } else if (anchor.x > rect.right) {
+      const cy = clamp(anchor.y, rect.top + radius + baseHalf, rect.bottom - radius - baseHalf);
+      p1 = { x: rect.right, y: cy + baseHalf };
+      p2 = { x: rect.right, y: cy - baseHalf };
+    } else if (anchor.y < rect.top) {
+      const cx = clamp(anchor.x, rect.left + radius + baseHalf, rect.right - radius - baseHalf);
+      p1 = { x: cx + baseHalf, y: rect.top };
+      p2 = { x: cx - baseHalf, y: rect.top };
+    } else {
+      const cx = clamp(anchor.x, rect.left + radius + baseHalf, rect.right - radius - baseHalf);
+      p1 = { x: cx - baseHalf, y: rect.bottom };
+      p2 = { x: cx + baseHalf, y: rect.bottom };
+    }
+
+    const padding = 20;
+    const minX = Math.min(anchor.x, p1.x, p2.x) - padding;
+    const minY = Math.min(anchor.y, p1.y, p2.y) - padding;
+    const maxX = Math.max(anchor.x, p1.x, p2.x) + padding;
+    const maxY = Math.max(anchor.y, p1.y, p2.y) + padding;
+    const toLocal = (point) => ({
+      x: point.x - minX,
+      y: point.y - minY
+    });
+    const localAnchor = toLocal(anchor);
+    const localP1 = toLocal(p1);
+    const localP2 = toLocal(p2);
+    const control1 = {
+      x: localP1.x + (localAnchor.x - localP1.x) * 0.58,
+      y: localP1.y + (localAnchor.y - localP1.y) * 0.58
+    };
+    const control2 = {
+      x: localP2.x + (localAnchor.x - localP2.x) * 0.58,
+      y: localP2.y + (localAnchor.y - localP2.y) * 0.58
+    };
+
+    return {
+      left: minX,
+      top: minY,
+      width: Math.max(1, maxX - minX),
+      height: Math.max(1, maxY - minY),
+      path: `M ${localP1.x} ${localP1.y} Q ${control1.x} ${control1.y} ${localAnchor.x} ${localAnchor.y} Q ${control2.x} ${control2.y} ${localP2.x} ${localP2.y} Z`
+    };
+  }
+
+  function getLegacyBubbleLatLng(entry) {
+    const bubbleWidth = getBubbleWidth(entry);
+    const bubbleOffset = getBubbleOffset(entry);
+    const markerPoint = map.latLngToContainerPoint(entry.latlng);
+    const bubblePoint = L.point(
+      markerPoint.x + (bubbleOffset.x >= 0 ? bubbleOffset.x - 18 : bubbleOffset.x + bubbleWidth - 18),
+      markerPoint.y + bubbleOffset.y + 10
+    );
+    return map.containerPointToLatLng(bubblePoint);
   }
 
   function makeBubbleIcon(entry) {
     const { name, details } = entry;
     const safeDetails = escapeHtml(details || '').trim() || '<em style="opacity:.6">No details yet</em>';
     const bubbleAccent = normalizePointColor(entry.markerColor);
-    const alignmentClass = getBubbleAlignment(entry) === 'left' ? 'align-left' : 'align-right';
+    const bubbleWidth = getBubbleWidth(entry);
+    const bubbleOffset = getBubbleOffset(entry);
+    const bubbleHeight = estimateBubbleHeight(entry);
+    const tail = buildBubbleTailGeometry(bubbleOffset, bubbleWidth, bubbleHeight);
     return L.divIcon({
       className: 'bubble-marker',
-      html: `<div class="bubble-shell ${alignmentClass}" style="--bubble-accent:${bubbleAccent}">
-               <div class="bubble-tip-dot"></div>
-               <div class="info-bubble">
-                 <div class="bubble-title">${escapeHtml(name)}</div>
-                 <div class="bubble-handle"><i class="fa-solid fa-up-down-left-right"></i></div>
-                 <div class="bubble-body">${safeDetails}</div>
+      html: `<div class="bubble-hitbox">
+               <div class="bubble-shell" style="--bubble-accent:${bubbleAccent}; --bubble-offset-x:${bubbleOffset.x}px; --bubble-offset-y:${bubbleOffset.y}px; --bubble-width:${bubbleWidth}px; --bubble-min-height:${bubbleHeight}px;">
+                 <svg class="bubble-tail-svg" viewBox="0 0 ${tail.width} ${tail.height}" style="left:${tail.left}px; top:${tail.top}px; width:${tail.width}px; height:${tail.height}px;" aria-hidden="true">
+                   <path d="${tail.path}"></path>
+                 </svg>
+                 <div class="info-bubble" data-bubble-id="${entry.id}">
+                   <div class="bubble-title">${escapeHtml(name)}</div>
+                   <div class="bubble-handle"><i class="fa-solid fa-up-down-left-right"></i></div>
+                   <div class="bubble-body">${safeDetails}</div>
+                   <div class="bubble-resize" data-bubble-id="${entry.id}" aria-hidden="true"></div>
+                 </div>
                </div>
              </div>`,
-      iconSize: null,
-      iconAnchor: [0, 0]
+      iconSize: [BUBBLE_HITBOX_WIDTH, BUBBLE_HITBOX_HEIGHT],
+      iconAnchor: [BUBBLE_HITBOX_ANCHOR_X, BUBBLE_HITBOX_ANCHOR_Y]
     });
   }
 
-  function ensureBubbleConnector(entry) {
-    if (!entry.bubbleLatLng) return;
-    if (!entry.bubbleLine) {
-      entry.bubbleLine = L.polyline([entry.latlng, entry.bubbleLatLng], {
-        pane: 'bubbleConnectors',
-        color: rgbaFromHex(entry.markerColor, 0.68),
-        weight: 2,
-        opacity: 0.95,
-        interactive: false,
-        lineCap: 'round'
-      }).addTo(map);
-      return;
+  let bubbleDragState = null;
+
+  function beginBubbleInteraction(entry, mode, event) {
+    if (!entry) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const mapRect = map.getContainer().getBoundingClientRect();
+    bubbleDragState = {
+      entry,
+      mode,
+      startX: event.clientX - mapRect.left,
+      startY: event.clientY - mapRect.top,
+      startOffset: getBubbleOffset(entry),
+      startWidth: getBubbleWidth(entry)
+    };
+    map.dragging.disable();
+  }
+
+  document.addEventListener('pointerdown', (event) => {
+    const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+    if (!target) return;
+    const resizeHandle = target.closest('.bubble-resize');
+    const bubbleCard = resizeHandle || target.closest('.info-bubble');
+    if (!bubbleCard) return;
+    const id = Number(bubbleCard.dataset.bubbleId || resizeHandle?.dataset.bubbleId);
+    if (!id) return;
+    beginBubbleInteraction(findPort(id), resizeHandle ? 'resize' : 'move', event);
+  });
+
+  document.addEventListener('pointermove', (event) => {
+    if (!bubbleDragState) return;
+    const mapRect = map.getContainer().getBoundingClientRect();
+    const nextX = event.clientX - mapRect.left;
+    const nextY = event.clientY - mapRect.top;
+    const dx = nextX - bubbleDragState.startX;
+    const dy = nextY - bubbleDragState.startY;
+    const { entry, mode, startOffset, startWidth } = bubbleDragState;
+
+    if (mode === 'move') {
+      entry.bubbleOffset = normalizeBubbleOffset({
+        x: startOffset.x + dx,
+        y: startOffset.y + dy
+      });
+    } else {
+      const nextWidth = startWidth + dx;
+      entry.bubbleWidth = normalizeBubbleWidth(nextWidth) || BUBBLE_DEFAULT_WIDTH;
     }
-    refreshBubbleConnector(entry);
-  }
 
-  function refreshBubbleConnector(entry) {
-    if (!entry.bubbleLine || !entry.bubbleLatLng) return;
-    entry.bubbleLine.setLatLngs([entry.latlng, entry.bubbleLatLng]);
-    entry.bubbleLine.setStyle({
-      color: rgbaFromHex(entry.markerColor, 0.68)
-    });
-  }
+    updateBubbleContent(entry, { skipRebind: true });
+  });
+
+  document.addEventListener('pointerup', () => {
+    if (!bubbleDragState) return;
+    bubbleDragState = null;
+    map.dragging.enable();
+    scheduleDraftSave();
+    scheduleHistorySnapshot();
+  });
+
+  document.addEventListener('pointercancel', () => {
+    if (!bubbleDragState) return;
+    bubbleDragState = null;
+    map.dragging.enable();
+    scheduleDraftSave();
+    scheduleHistorySnapshot();
+  });
 
   function showBubble(entry) {
     if (entry.bubble) return;
-    if (!entry.bubbleLatLng) entry.bubbleLatLng = defaultBubbleLatLng(entry.latlng);
+    if (!entry.bubbleOffset) entry.bubbleOffset = defaultBubbleOffset(entry.latlng, getBubbleWidth(entry));
     entry.bubbleVisible = true;
-    ensureBubbleConnector(entry);
 
-    const bubble = L.marker(entry.bubbleLatLng, {
+    const bubble = L.marker(entry.latlng, {
       icon: makeBubbleIcon(entry),
-      draggable: true,
       autoPan: false,
       zIndexOffset: 500
     }).addTo(map);
 
-    bubble.on('drag', () => {
-      entry.bubbleLatLng = bubble.getLatLng();
-      bubble.setIcon(makeBubbleIcon(entry));
-      refreshBubbleConnector(entry);
-    });
-    bubble.on('dragend', () => {
-      scheduleDraftSave();
-      scheduleHistorySnapshot();
-    });
     bubble.on('click', (ev) => { L.DomEvent.stopPropagation(ev); });
 
     entry.bubble = bubble;
   }
 
-  function updateBubbleContent(entry) {
+  function updateBubbleContent(entry, options) {
     if (!entry.bubble) return;
+    entry.bubble.setLatLng(entry.latlng);
     entry.bubble.setIcon(makeBubbleIcon(entry));
-    refreshBubbleConnector(entry);
   }
 
   function hideBubble(entry) {
@@ -1108,10 +1439,6 @@
     if (entry.bubble) {
       map.removeLayer(entry.bubble);
       entry.bubble = null;
-    }
-    if (entry.bubbleLine) {
-      map.removeLayer(entry.bubbleLine);
-      entry.bubbleLine = null;
     }
   }
 
@@ -1161,12 +1488,16 @@
     setPanelHidden(false);
     setDrawMode(false);
     setMeasureMode(false);
-    showHint('Click anywhere on the map to add a port.', true);
+    showHint(`Click anywhere on the map to add a ${getModeCopy().pointSingular.toLowerCase()}.`, true);
   });
   workflowRoutesBtn.addEventListener('click', () => {
     setPanelHidden(false);
+    if (isPinsMode()) {
+      showHint(getModeCopy().drawHint);
+      return;
+    }
     if (markers.length < 2) {
-      showHint('Add at least two ports before charting a route.');
+      showHint(`Add at least two ${getModeCopy().pointPlural.toLowerCase()} before continuing.`);
       return;
     }
     setDrawMode(true);
@@ -1184,6 +1515,7 @@
   [
     [settingsTitleInput, 'input', () => applySettings({ atlasTitle: settingsTitleInput.value || DEFAULT_SETTINGS.atlasTitle })],
     [settingsSubtitleInput, 'input', () => applySettings({ atlasSubtitle: settingsSubtitleInput.value || DEFAULT_SETTINGS.atlasSubtitle })],
+    [atlasModeSelect, 'change', () => applySettings({ atlasMode: atlasModeSelect.value })],
     [themeModeSelect, 'change', () => applySettings({ themeMode: themeModeSelect.value })],
     [mapStyleSelect, 'change', () => applySettings({ mapStyle: mapStyleSelect.value })],
     [displayFontSelect, 'change', () => applySettings({ displayFont: displayFontSelect.value })],
@@ -1224,7 +1556,7 @@
 
     portSearchResults.innerHTML = '';
     if (!matches.length) {
-      portSearchResults.innerHTML = '<div class="search-empty">No matching ports in the current atlas.</div>';
+      portSearchResults.innerHTML = `<div class="search-empty">${escapeHtml(getModeCopy().searchEmpty)}</div>`;
       return;
     }
 
@@ -1357,9 +1689,10 @@
       style: () => ({
         fillColor: settings.landColor,
         fillOpacity: 1,
-        color: tintHex(settings.landColor, -0.18),
-        opacity: 0.72,
-        weight: 0.8,
+        color: 'transparent',
+        opacity: 0,
+        weight: 0,
+        stroke: false,
         className: 'presentation-land'
       })
     });
@@ -1618,7 +1951,13 @@
   /* ===== Route plotting ===== */
   async function plotRoute(portA, portB) {
     if (isPlottingRoute) {
-      showHint('A route is already being charted.');
+      showHint(isConnectionsMode() ? 'A connection is already being added.' : 'A route is already being charted.');
+      return;
+    }
+    if (isConnectionsMode()) {
+      const latlngs = [[portA.latlng.lat, portA.latlng.lng], [portB.latlng.lat, portB.latlng.lng]];
+      const km = haversine(portA.latlng, portB.latlng);
+      commitRoute(portA, portB, latlngs, km, 'primary', 'connection');
       return;
     }
     isPlottingRoute = true;
@@ -1680,10 +2019,27 @@
   }
 
   /* ===== Route layers ===== */
-  function drawRouteLayer(latlngs, style = 'primary', preview = false) {
+  function drawRouteLayer(latlngs, style = 'primary', preview = false, routeMode = 'maritime') {
     const color = style === 'primary'
       ? getComputedStyle(document.documentElement).getPropertyValue('--route-color').trim()
       : getComputedStyle(document.documentElement).getPropertyValue('--route-alt-color').trim();
+
+    if (routeMode === 'connection') {
+      const halo = L.polyline(latlngs, {
+        color,
+        weight: preview ? 9 : 7,
+        opacity: preview ? 0.18 : 0.12,
+        lineCap: 'round'
+      });
+      const line = L.polyline(latlngs, {
+        color,
+        weight: preview ? 3 : 2.5,
+        opacity: 0.95,
+        dashArray: preview ? '10, 10' : '12, 10',
+        lineCap: 'round'
+      });
+      return L.layerGroup([halo, line]);
+    }
 
     const halo = L.polyline(latlngs, {
       color, weight: preview ? 10 : 8, opacity: preview ? 0.25 : 0.18, lineCap: 'round'
@@ -1695,25 +2051,26 @@
     return L.layerGroup([halo, line]);
   }
 
-  function bindRoutePopup(group, portAName, portBName, km, variant) {
+  function bindRoutePopup(group, portAName, portBName, km, variant, routeMode = 'maritime') {
     const nm = Math.round(km / 1.852);
     group.eachLayer(l => {
       l.bindPopup(`
         <div class="port-popup">
           <strong>${escapeHtml(portAName)} → ${escapeHtml(portBName)}</strong>
-          <div class="coord">${Math.round(km).toLocaleString()} km • ${nm.toLocaleString()} nautical mi • ${variant === 'primary' ? 'Primary' : 'Alternative'}</div>
+          <div class="coord">${Math.round(km).toLocaleString()} km • ${nm.toLocaleString()} nautical mi • ${routeMode === 'connection' ? 'Connection' : (variant === 'primary' ? 'Primary' : 'Alternative')}</div>
         </div>
       `);
     });
   }
 
   function refreshRouteLayers() {
+    const fallbackPointName = getModeCopy().pointSingular;
     routes.forEach((route) => {
       if (route.layer) map.removeLayer(route.layer);
-      const nextGroup = drawRouteLayer(route.latlngs, route.variant).addTo(map);
+      const nextGroup = drawRouteLayer(route.latlngs, route.variant, false, route.routeMode || 'maritime').addTo(map);
       const from = findPort(route.fromId);
       const to = findPort(route.toId);
-      bindRoutePopup(nextGroup, from ? from.name : route.fromName || 'Port', to ? to.name : route.toName || 'Port', route.km, route.variant);
+      bindRoutePopup(nextGroup, from ? from.name : route.fromName || fallbackPointName, to ? to.name : route.toName || fallbackPointName, route.km, route.variant, route.routeMode || 'maritime');
       route.layer = nextGroup;
       route.fromName = from ? from.name : route.fromName;
       route.toName = to ? to.name : route.toName;
@@ -1723,8 +2080,8 @@
   function offerRouteChoice(portA, portB, primLL, primKm, altLL, altKm) {
     closeRouteChoice({ silent: true });
     // Show both as previews on map
-    const primPreview = drawRouteLayer(primLL, 'primary', true).addTo(map);
-    const altPreview  = drawRouteLayer(altLL,  'alt',     true).addTo(map);
+    const primPreview = drawRouteLayer(primLL, 'primary', true, 'maritime').addTo(map);
+    const altPreview  = drawRouteLayer(altLL,  'alt',     true, 'maritime').addTo(map);
     map.fitBounds(primPreview.getLayers()[0].getBounds().extend(altPreview.getLayers()[0].getBounds()), { padding: [60, 60] });
 
     routeChoiceSub.textContent = `Two viable sea routes from ${portA.name} to ${portB.name}.`;
@@ -1742,7 +2099,7 @@
       `;
       btn.addEventListener('click', () => {
         closeRouteChoice({ silent: true });
-        commitRoute(portA, portB, latlngs, km, variant);
+        commitRoute(portA, portB, latlngs, km, variant, 'maritime');
       });
       return btn;
     };
@@ -1779,14 +2136,16 @@
     if (e.target === routeChoiceModal) closeRouteChoice();
   });
 
-  function commitRoute(portA, portB, latlngs, km, variant) {
-    const group = drawRouteLayer(latlngs, variant).addTo(map);
+  function commitRoute(portA, portB, latlngs, km, variant, routeMode = 'maritime') {
+    const group = drawRouteLayer(latlngs, variant, false, routeMode).addTo(map);
     const nm = Math.round(km / 1.852);
-    bindRoutePopup(group, portA.name, portB.name, km, variant);
-    routes.push({ layer: group, fromId: portA.id, toId: portB.id, fromName: portA.name, toName: portB.name, variant, km, latlngs });
+    bindRoutePopup(group, portA.name, portB.name, km, variant, routeMode);
+    routes.push({ layer: group, fromId: portA.id, toId: portB.id, fromName: portA.name, toName: portB.name, variant, km, latlngs, routeMode });
     updateStats();
     refreshWorkflowState();
-    showHint(`Route charted: ${portA.name} → ${portB.name} (${nm.toLocaleString()} nmi)`);
+    showHint(routeMode === 'connection'
+      ? `Connection added: ${portA.name} → ${portB.name} (${Math.round(km).toLocaleString()} km)`
+      : `Route charted: ${portA.name} → ${portB.name} (${nm.toLocaleString()} nmi)`);
     scheduleDraftSave();
     scheduleHistorySnapshot();
   }
@@ -1797,13 +2156,13 @@
     if (selectedForRoute.some(s => s.id === entry.id)) {
       selectedForRoute = selectedForRoute.filter(s => s.id !== entry.id);
       refreshMarkerVisuals();
-      showHint('Port deselected. Choose a port to continue.');
+      showHint(getModeCopy().selectionRepeat);
       return;
     }
     selectedForRoute.push(entry);
     refreshMarkerVisuals();
     if (selectedForRoute.length === 1) {
-      showHint(`Origin: ${entry.name}. Select destination…`, true);
+      showHint(`${getModeCopy().selectionFirst}${entry.name}. Select destination…`, true);
     } else if (selectedForRoute.length === 2) {
       const [a, b] = selectedForRoute;
       selectedForRoute = [];
@@ -1813,7 +2172,12 @@
   }
 
   function setDrawMode(on) {
-    if (on && !seaReady) {
+    const copy = getModeCopy();
+    if (on && isPinsMode()) {
+      showHint(copy.drawHint);
+      return;
+    }
+    if (on && !isConnectionsMode() && !seaReady) {
       showHint('Sea charts still loading…');
       return;
     }
@@ -1824,20 +2188,20 @@
     if (on) setMeasureMode(false);
     drawMode = on;
     drawBtn.classList.toggle('active', on);
-    drawLabel.textContent = on ? 'Cancel route' : 'Chart route';
+    drawLabel.textContent = on ? copy.drawActive : copy.drawIdle;
     if (!on) {
       selectedForRoute = [];
       hideHint();
     } else {
       if (markers.length < 2) {
-        showHint('Place at least two ports first.');
+        showHint(`Place at least two ${copy.pointPlural.toLowerCase()} first.`);
         drawMode = false;
         drawBtn.classList.remove('active');
-        drawLabel.textContent = 'Chart route';
+        drawLabel.textContent = copy.drawIdle;
         refreshWorkflowState();
         return;
       }
-      showHint('Click two ports to chart a sea route.', true);
+      showHint(copy.drawHint, true);
     }
     refreshMarkerVisuals();
     refreshWorkflowState();
@@ -2096,7 +2460,12 @@
 
     markers.forEach((markerEntry) => {
       bounds.extend(markerEntry.latlng);
-      if (markerEntry.bubbleLatLng) bounds.extend(markerEntry.bubbleLatLng);
+      if (markerEntry.bubbleVisible && markerEntry.bubble && markerEntry.bubble.getElement()) {
+        const rect = markerEntry.bubble.getElement().getBoundingClientRect();
+        const mapRect = map.getContainer().getBoundingClientRect();
+        bounds.extend(map.containerPointToLatLng([rect.left - mapRect.left, rect.top - mapRect.top]));
+        bounds.extend(map.containerPointToLatLng([rect.right - mapRect.left, rect.bottom - mapRect.top]));
+      }
       hasContent = true;
     });
 
@@ -2236,8 +2605,11 @@
         markerColor: m.markerColor,
         details: m.details || '',
         bubbleVisible: !!m.bubbleVisible,
-        bubbleLat: m.bubbleLatLng ? m.bubbleLatLng.lat : null,
-        bubbleLng: m.bubbleLatLng ? m.bubbleLatLng.lng : null
+        bubbleWidth: getBubbleWidth(m),
+        bubbleOffsetX: getBubbleOffset(m).x,
+        bubbleOffsetY: getBubbleOffset(m).y,
+        bubbleLat: m.bubbleVisible ? getLegacyBubbleLatLng(m).lat : null,
+        bubbleLng: m.bubbleVisible ? getLegacyBubbleLatLng(m).lng : null
       })),
       routes: routes.map(r => ({
         fromId: r.fromId,
@@ -2245,6 +2617,7 @@
         fromName: r.fromName,
         toName: r.toName,
         variant: r.variant,
+        routeMode: r.routeMode || 'maritime',
         km: r.km,
         latlngs: r.latlngs
       }))
@@ -2273,15 +2646,24 @@
           applySettings({ ...DEFAULT_SETTINGS, ...normalizedData.settings }, { recordDraft: false, recordHistory: false });
         }
 
+        if (normalizedData.view && Array.isArray(normalizedData.view.center)) {
+          map.setView(normalizedData.view.center, normalizedData.view.zoom || map.getZoom());
+        } else {
+          map.setView(DEFAULT_VIEW.center, DEFAULT_VIEW.zoom);
+        }
+
         const idMap = {};
         (normalizedData.ports || []).forEach((p) => {
           const latlng = L.latLng(p.lat, p.lng);
-          const entry = addMarker(latlng, p.name || 'Port', {
+          const entry = addMarker(latlng, p.name || getModeCopy().pointSingular, {
             id: p.id,
             iconKey: p.iconKey,
             markerColor: p.markerColor,
             details: p.details || '',
             bubbleVisible: !!p.bubbleVisible,
+            bubbleWidth: p.bubbleWidth,
+            bubbleOffsetX: p.bubbleOffsetX,
+            bubbleOffsetY: p.bubbleOffsetY,
             bubbleLatLng: (p.bubbleLat != null && p.bubbleLng != null)
               ? { lat: p.bubbleLat, lng: p.bubbleLng }
               : null
@@ -2295,14 +2677,9 @@
           if (!a || !b) return;
           const latlngs = r.latlngs || [[a.latlng.lat, a.latlng.lng], [b.latlng.lat, b.latlng.lng]];
           const km = r.km != null ? r.km : pathLengthKm(latlngs);
-          commitRoute(a, b, latlngs, km, r.variant || 'primary');
+          commitRoute(a, b, latlngs, km, r.variant || 'primary', r.routeMode || 'maritime');
         });
 
-        if (normalizedData.view && Array.isArray(normalizedData.view.center)) {
-          map.setView(normalizedData.view.center, normalizedData.view.zoom || map.getZoom());
-        } else {
-          map.setView(DEFAULT_VIEW.center, DEFAULT_VIEW.zoom);
-        }
       });
     });
 
@@ -2310,7 +2687,7 @@
       storedDraft = normalizedData;
       refreshDraftUi();
       saveHistoryNow();
-      showHint(`Draft restored — ${markers.length} ports, ${routes.length} routes.`);
+      showHint(`Draft restored — ${markers.length} ${getModeCopy().pointPlural.toLowerCase()}, ${routes.length} ${getModeCopy().routesLabel.toLowerCase()}.`);
       return;
     }
 
@@ -2321,7 +2698,7 @@
 
     saveDraftNow();
     saveHistoryNow();
-    showHint(`Atlas imported — ${markers.length} ports, ${routes.length} routes.`);
+    showHint(`Atlas imported — ${markers.length} ${getModeCopy().pointPlural.toLowerCase()}, ${routes.length} ${getModeCopy().routesLabel.toLowerCase()}.`);
   }
 
   function buildGeoJsonExport() {
@@ -2345,7 +2722,7 @@
             coordinates: [port.lng, port.lat]
           },
           properties: {
-            featureType: 'port',
+            featureType: atlasState.settings.atlasMode === 'maritime' ? 'port' : 'location',
             id: port.id,
             name: port.name,
             iconKey: port.iconKey,
@@ -2363,12 +2740,13 @@
             coordinates: route.latlngs.map(([lat, lng]) => [lng, lat])
           },
           properties: {
-            featureType: 'route',
+            featureType: route.routeMode === 'connection' ? 'connection' : 'route',
             fromId: route.fromId,
             toId: route.toId,
             fromName: route.fromName,
             toName: route.toName,
             variant: route.variant,
+            routeMode: route.routeMode || 'maritime',
             km: route.km
           }
         }))
