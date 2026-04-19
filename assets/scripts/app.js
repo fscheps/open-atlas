@@ -1,6 +1,3 @@
-  /* ===== Theme + typography ===== */
-  document.documentElement.classList.remove('dark');
-
   /* ===== Map ===== */
   const map = L.map('map', { zoomControl: true, worldCopyJump: true }).setView([25, -30], 3);
   const TILE_STYLES = {
@@ -36,6 +33,7 @@
   const BUBBLE_DEFAULT_BOTTOM_OFFSET = 24;
   const BUBBLE_LEGACY_DISTANCE_LIMIT = 250;
   const BUBBLE_VIEW_MARGIN = 12;
+  map.getContainer().appendChild(document.getElementById('mapPresentationOverlay'));
   const bubbleOverlay = L.DomUtil.create('div', 'bubble-overlay', map.getContainer());
   bubbleOverlay.setAttribute('aria-hidden', 'true');
   const bubbleResizeObserver = typeof ResizeObserver === 'function'
@@ -129,6 +127,7 @@
   const clearBtn = document.getElementById('clearMapBtn');
   const hintEl = document.getElementById('hint');
   const hintText = document.getElementById('hintText');
+  const srAnnouncer = document.getElementById('srAnnouncer');
   const portCountEl = document.getElementById('portCount');
   const routeCountEl = document.getElementById('routeCount');
   const chartState = document.getElementById('chartState');
@@ -155,6 +154,15 @@
   const panelIntroText = document.getElementById('panelIntroText');
   const pointCountLabel = document.getElementById('pointCountLabel');
   const routeCountLabel = document.getElementById('routeCountLabel');
+  const mapPresentationOverlay = document.getElementById('mapPresentationOverlay');
+  const mapTitleBlock = document.getElementById('mapTitleBlock');
+  const mapTitleBadge = document.getElementById('mapTitleBadge');
+  const mapTitleLogo = document.getElementById('mapTitleLogo');
+  const mapTitleBlockTitle = document.getElementById('mapTitleBlockTitle');
+  const mapTitleBlockSubtitle = document.getElementById('mapTitleBlockSubtitle');
+  const mapLegendBlock = document.getElementById('mapLegendBlock');
+  const mapLegendTitle = document.getElementById('mapLegendTitle');
+  const mapLegendBody = document.getElementById('mapLegendBody');
   const createSectionNote = document.getElementById('createSectionNote');
   const findSavedLabel = document.getElementById('findSavedLabel');
 
@@ -204,6 +212,16 @@
   const uiFontSelect = document.getElementById('uiFontSelect');
   const calloutStyleSelect = document.getElementById('calloutStyleSelect');
   const connectionStyleSelect = document.getElementById('connectionStyleSelect');
+  const showDirectionArrowsSelect = document.getElementById('showDirectionArrowsSelect');
+  const showTitleBlockSelect = document.getElementById('showTitleBlockSelect');
+  const titleBadgeInput = document.getElementById('titleBadgeInput');
+  const titleLogoInput = document.getElementById('titleLogoInput');
+  const showLegendSelect = document.getElementById('showLegendSelect');
+  const legendTitleInput = document.getElementById('legendTitleInput');
+  const legendBodyInput = document.getElementById('legendBodyInput');
+  const showLabelsSelect = document.getElementById('showLabelsSelect');
+  const showCalloutsSelect = document.getElementById('showCalloutsSelect');
+  const showRoutesSelect = document.getElementById('showRoutesSelect');
   const accentColorInput = document.getElementById('accentColorInput');
   const markerColorInput = document.getElementById('markerColorInput');
   const routeColorInput = document.getElementById('routeColorInput');
@@ -236,7 +254,7 @@
   const ATLAS_FORMAT = 'open-atlas';
   const LEGACY_ATLAS_FORMAT = 'mariners-atlas';
   const ATLAS_GEOJSON_FORMAT = 'open-atlas-geojson';
-  const ATLAS_VERSION = 8;
+  const ATLAS_VERSION = 9;
   const SETTINGS_STORAGE_KEY = 'open-atlas-settings-v2';
   const LEGACY_SETTINGS_STORAGE_KEY = 'mariners-atlas-settings-v1';
   const DRAFT_STORAGE_KEY = 'open-atlas-draft-v2';
@@ -251,6 +269,13 @@
     standard: 1.5,
     high: 2,
     ultra: 3
+  };
+  const EXPORT_ASPECTS = {
+    native: null,
+    '16:9': 16 / 9,
+    '4:5': 4 / 5,
+    '1:1': 1,
+    'a4-landscape': 297 / 210
   };
   const FONT_STACKS = {
     cormorant: "'Cormorant Garamond', serif",
@@ -308,7 +333,6 @@
       uiFont: 'jetbrains',
       calloutStyle: 'bold',
       connectionStyle: 'straight',
-      themeMode: 'light',
       mapStyle: 'voyager_labels_under',
       seaColor: '#d6e1ea',
       landColor: '#f2eadc'
@@ -324,7 +348,6 @@
       uiFont: 'ibmplexmono',
       calloutStyle: 'editorial',
       connectionStyle: 'arc',
-      themeMode: 'light',
       mapStyle: 'presentation',
       seaColor: '#d7e7f1',
       landColor: '#f7f4ea'
@@ -340,23 +363,49 @@
       uiFont: 'ibmplexmono',
       calloutStyle: 'subtle',
       connectionStyle: 'arc',
-      themeMode: 'light',
       mapStyle: 'voyager_nolabels',
       seaColor: '#d8e7e0',
       landColor: '#efe7d7'
+    },
+    airway: {
+      label: 'Airway',
+      accentColor: '#355070',
+      markerColor: '#d1495b',
+      routeColor: '#355070',
+      routeAltColor: '#ca6702',
+      displayFont: 'fraunces',
+      bodyFont: 'manrope',
+      uiFont: 'ibmplexmono',
+      calloutStyle: 'editorial',
+      connectionStyle: 'arc',
+      mapStyle: 'presentation',
+      atlasMode: 'connections',
+      showDirectionArrows: true,
+      titleBadge: 'Air Routes',
+      seaColor: '#dfeaf2',
+      landColor: '#f9f4ea'
     }
   };
   const DEFAULT_SETTINGS = {
     atlasTitle: 'Open Atlas',
     atlasSubtitle: 'Map Studio',
     atlasMode: 'maritime',
-    themeMode: 'light',
     mapStyle: 'positron',
     displayFont: 'fraunces',
     bodyFont: 'manrope',
     uiFont: 'ibmplexmono',
     calloutStyle: 'editorial',
     connectionStyle: 'arc',
+    showDirectionArrows: true,
+    showTitleBlock: true,
+    titleBadge: '',
+    titleLogoDataUrl: '',
+    showLegend: false,
+    legendTitle: 'Legend',
+    legendBody: 'Markers, routes, and callouts can be styled in Appearance.',
+    showLabels: true,
+    showCallouts: true,
+    showRoutes: true,
     accentColor: '#18567a',
     markerColor: '#0b7a75',
     routeColor: '#18567a',
@@ -379,13 +428,23 @@
   let historySuspended = 0;
   let historyStack = [];
   let historyIndex = -1;
+  let nextRouteId = 1;
+  let exportVisibilityOverride = null;
+  let lastAtlasValidationError = '';
+  let lastSavedDraftSignature = '';
 
   const ATLAS_MODES = ['maritime', 'pins', 'connections'];
   const CALLOUT_STYLES = ['subtle', 'editorial', 'bold'];
   const CONNECTION_STYLES = ['straight', 'arc'];
   const POINT_TYPES = POINT_TYPE_OPTIONS.map((option) => option.key);
   const PLACE_SEARCH_ENDPOINT = 'https://nominatim.openstreetmap.org/search';
+  const PLACE_SEARCH_MIN_INTERVAL_MS = 1000;
+  const PLACE_SEARCH_TIMEOUT_MS = 8000;
   const placeSearchCache = new Map();
+  const LAND_DATA_CACHE_KEY = 'open-atlas-land-110m-json-v1';
+  let placeSearchLastStartedAt = 0;
+  let activeModal = null;
+  const modalFocusState = new WeakMap();
 
   function updateStats() {
     portCountEl.textContent = markers.length;
@@ -396,6 +455,7 @@
   let hintTimer = null;
   function showHint(text, sticky = false) {
     hintText.textContent = text;
+    if (srAnnouncer) srAnnouncer.textContent = text;
     hintEl.classList.add('visible');
     if (hintTimer) clearTimeout(hintTimer);
     if (!sticky) hintTimer = setTimeout(() => hintEl.classList.remove('visible'), 2800);
@@ -411,6 +471,47 @@
 
   function clamp(v, min, max) {
     return Math.min(max, Math.max(min, v));
+  }
+
+  function wait(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function isQuotaExceededError(err) {
+    return !!(err && (
+      err.name === 'QuotaExceededError'
+      || err.code === 22
+      || err.code === 1014
+    ));
+  }
+
+  function getFocusableElements(root) {
+    if (!root) return [];
+    return Array.from(root.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+      .filter((el) => !el.hasAttribute('disabled') && !el.getAttribute('aria-hidden') && el.offsetParent !== null);
+  }
+
+  function openModal(modal, options = {}) {
+    if (!modal) return;
+    const trigger = options.trigger || document.activeElement;
+    modalFocusState.set(modal, { trigger });
+    modal.classList.add('show');
+    activeModal = modal;
+    requestAnimationFrame(() => {
+      const focusTarget = options.initialFocus || getFocusableElements(modal)[0] || modal;
+      if (focusTarget && typeof focusTarget.focus === 'function') focusTarget.focus();
+    });
+  }
+
+  function closeModal(modal) {
+    if (!modal) return;
+    modal.classList.remove('show');
+    if (activeModal === modal) activeModal = null;
+    const state = modalFocusState.get(modal);
+    const trigger = state && state.trigger;
+    if (trigger && typeof trigger.focus === 'function' && document.contains(trigger)) {
+      requestAnimationFrame(() => trigger.focus());
+    }
   }
 
   function hexToRgb(hex) {
@@ -458,6 +559,54 @@
 
   function normalizeConnectionStyle(style) {
     return CONNECTION_STYLES.includes(style) ? style : DEFAULT_SETTINGS.connectionStyle;
+  }
+
+  function normalizeBooleanSetting(value, fallback = false) {
+    if (typeof value === 'boolean') return value;
+    if (value === 'on') return true;
+    if (value === 'off') return false;
+    return fallback;
+  }
+
+  function hasVisibleMarkers(visibility = exportVisibilityOverride) {
+    if (visibility && visibility.markers !== undefined) return !!visibility.markers;
+    return true;
+  }
+
+  function hasVisibleRoutes(visibility = exportVisibilityOverride) {
+    const liveVisible = normalizeBooleanSetting(settings.showRoutes, DEFAULT_SETTINGS.showRoutes);
+    if (visibility && visibility.routes !== undefined) return liveVisible && !!visibility.routes;
+    return liveVisible;
+  }
+
+  function hasVisibleLabels(visibility = exportVisibilityOverride) {
+    const liveVisible = normalizeBooleanSetting(settings.showLabels, DEFAULT_SETTINGS.showLabels);
+    if (visibility && visibility.labels !== undefined) return liveVisible && !!visibility.labels;
+    return liveVisible;
+  }
+
+  function hasVisibleCallouts(visibility = exportVisibilityOverride) {
+    const liveVisible = normalizeBooleanSetting(settings.showCallouts, DEFAULT_SETTINGS.showCallouts);
+    if (visibility && visibility.callouts !== undefined) return liveVisible && !!visibility.callouts;
+    return liveVisible;
+  }
+
+  function hasVisibleDirectionArrows(visibility = exportVisibilityOverride) {
+    const liveVisible = normalizeBooleanSetting(settings.showDirectionArrows, DEFAULT_SETTINGS.showDirectionArrows);
+    if (visibility && visibility.directionMarkers !== undefined) return liveVisible && !!visibility.directionMarkers;
+    return liveVisible;
+  }
+
+  function hasVisibleTitleBlock(visibility = exportVisibilityOverride) {
+    const liveVisible = normalizeBooleanSetting(settings.showTitleBlock, DEFAULT_SETTINGS.showTitleBlock);
+    if (visibility && visibility.titleBlock !== undefined) return liveVisible && !!visibility.titleBlock;
+    return liveVisible;
+  }
+
+  function hasVisibleLegend(visibility = exportVisibilityOverride) {
+    const liveVisible = normalizeBooleanSetting(settings.showLegend, DEFAULT_SETTINGS.showLegend);
+    if (visibility && visibility.legend !== undefined) return liveVisible && !!visibility.legend;
+    return liveVisible;
   }
 
   function getDefaultPointType(mode) {
@@ -659,14 +808,61 @@
     return format === ATLAS_FORMAT || format === LEGACY_ATLAS_FORMAT;
   }
 
+  function isFiniteLatLng(lat, lng) {
+    return Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+  }
+
+  function validateAtlasData(data) {
+    if (!Array.isArray(data.ports)) return 'Atlas ports must be an array.';
+    if (data.routes != null && !Array.isArray(data.routes)) return 'Atlas routes must be an array.';
+    const seenPortIds = new Set();
+    for (let i = 0; i < data.ports.length; i += 1) {
+      const port = data.ports[i];
+      if (!port || typeof port !== 'object') return `Port ${i + 1} must be an object.`;
+      if (!Number.isFinite(port.id)) return `Port ${i + 1} is missing a numeric id.`;
+      if (seenPortIds.has(port.id)) return `Port id ${port.id} is duplicated.`;
+      seenPortIds.add(port.id);
+      if (!String(port.name || '').trim()) return `Port ${i + 1} must have a name.`;
+      if (!isFiniteLatLng(Number(port.lat), Number(port.lng))) {
+        return `Port "${String(port.name || '').trim() || port.id}" has invalid coordinates.`;
+      }
+    }
+    for (let i = 0; i < (data.routes || []).length; i += 1) {
+      const route = data.routes[i];
+      if (!route || typeof route !== 'object') return `Route ${i + 1} must be an object.`;
+      if (!Number.isFinite(route.fromId) || !seenPortIds.has(route.fromId)) return `Route ${i + 1} has an invalid fromId.`;
+      if (!Number.isFinite(route.toId) || !seenPortIds.has(route.toId)) return `Route ${i + 1} has an invalid toId.`;
+      if (route.latlngs != null) {
+        if (!Array.isArray(route.latlngs) || route.latlngs.length < 2) return `Route ${i + 1} must contain at least two path points.`;
+        for (let j = 0; j < route.latlngs.length; j += 1) {
+          const point = route.latlngs[j];
+          if (!Array.isArray(point) || point.length < 2 || !isFiniteLatLng(Number(point[0]), Number(point[1]))) {
+            return `Route ${i + 1} has an invalid path point at index ${j}.`;
+          }
+        }
+      }
+    }
+    return '';
+  }
+
   function normalizeAtlasFormat(data) {
+    lastAtlasValidationError = '';
     if (!data || typeof data !== 'object') return null;
-    if (!isSupportedAtlasFormat(data.format) || !Array.isArray(data.ports)) return null;
-    return {
+    if (!isSupportedAtlasFormat(data.format) || !Array.isArray(data.ports)) {
+      lastAtlasValidationError = 'Unsupported atlas format.';
+      return null;
+    }
+    const normalized = {
       ...data,
       format: ATLAS_FORMAT,
       version: typeof data.version === 'number' ? Math.max(data.version, ATLAS_VERSION) : ATLAS_VERSION
     };
+    const validationError = validateAtlasData(normalized);
+    if (validationError) {
+      lastAtlasValidationError = validationError;
+      return null;
+    }
+    return normalized;
   }
 
   function loadStoredSettings() {
@@ -709,6 +905,9 @@
       localStorage.removeItem(LEGACY_SETTINGS_STORAGE_KEY);
     } catch (err) {
       console.warn('Failed to persist settings', err);
+      if (isQuotaExceededError(err)) {
+        showHint('Settings could not be saved — browser storage is full.', true);
+      }
     }
   }
 
@@ -805,6 +1004,7 @@
       console.warn('Failed to remove stored draft', err);
     }
     storedDraft = null;
+    lastSavedDraftSignature = '';
     refreshDraftUi();
     if (!options.silent) showHint('Saved draft discarded.');
   }
@@ -830,9 +1030,15 @@
     try {
       localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftState));
       storedDraft = draftState;
+      lastSavedDraftSignature = atlasStateSignature(atlasState);
       refreshDraftUi();
     } catch (err) {
       console.warn('Failed to persist draft', err);
+      if (isQuotaExceededError(err)) {
+        const quotaMessage = 'Draft could not be saved — storage full. Export your atlas to keep your work.';
+        draftNote.textContent = quotaMessage;
+        showHint(quotaMessage, true);
+      }
     }
   }
 
@@ -964,11 +1170,6 @@
     });
   }
 
-  function refreshThemeMode() {
-    document.documentElement.classList.remove('dark');
-    settings.themeMode = 'light';
-  }
-
   function refreshSettingsForm() {
     settingsTitleInput.value = settings.atlasTitle;
     settingsSubtitleInput.value = settings.atlasSubtitle;
@@ -979,6 +1180,15 @@
     uiFontSelect.value = settings.uiFont;
     calloutStyleSelect.value = normalizeCalloutStyle(settings.calloutStyle);
     connectionStyleSelect.value = normalizeConnectionStyle(settings.connectionStyle);
+    showDirectionArrowsSelect.value = hasVisibleDirectionArrows() ? 'on' : 'off';
+    showTitleBlockSelect.value = normalizeBooleanSetting(settings.showTitleBlock, DEFAULT_SETTINGS.showTitleBlock) ? 'on' : 'off';
+    titleBadgeInput.value = settings.titleBadge || '';
+    showLegendSelect.value = normalizeBooleanSetting(settings.showLegend, DEFAULT_SETTINGS.showLegend) ? 'on' : 'off';
+    legendTitleInput.value = settings.legendTitle || DEFAULT_SETTINGS.legendTitle;
+    legendBodyInput.value = settings.legendBody || DEFAULT_SETTINGS.legendBody;
+    showLabelsSelect.value = hasVisibleLabels() ? 'on' : 'off';
+    showCalloutsSelect.value = hasVisibleCallouts() ? 'on' : 'off';
+    showRoutesSelect.value = hasVisibleRoutes() ? 'on' : 'off';
     accentColorInput.value = settings.accentColor;
     markerColorInput.value = settings.markerColor;
     routeColorInput.value = settings.routeColor;
@@ -1005,9 +1215,35 @@
     const calloutLabel = normalizeCalloutStyle(settings.calloutStyle);
     const connectionLabel = normalizeConnectionStyle(settings.connectionStyle);
     settingsPreviewNote.textContent = settings.mapStyle === 'presentation'
-      ? `Presentation Flat uses your custom sea and land palette for quieter ${copy.mode === 'maritime' ? 'atlas' : 'map'} exports, with ${calloutLabel} callouts and ${connectionLabel} connections.`
+      ? `Presentation Flat uses your custom sea and land palette for quieter ${copy.mode === 'maritime' ? 'atlas' : 'map'} exports, with ${calloutLabel} callouts, ${connectionLabel} connections, and ${normalizeBooleanSetting(settings.showLegend, DEFAULT_SETTINGS.showLegend) ? 'a visible legend' : 'a clean open canvas'}.`
       : `Tile basemaps keep geographic labels while your overlays inherit the palette, type choices, ${calloutLabel} callout treatment, and ${connectionLabel} connections.`;
     settingsPreview.dataset.calloutStyle = normalizeCalloutStyle(settings.calloutStyle);
+  }
+
+  function refreshPresentationOverlay() {
+    mapPresentationOverlay.dataset.mode = getAtlasMode();
+    mapTitleBlock.classList.toggle('is-hidden', !hasVisibleTitleBlock());
+    mapLegendBlock.classList.toggle('is-hidden', !hasVisibleLegend());
+    mapTitleBlockTitle.textContent = settings.atlasTitle || DEFAULT_SETTINGS.atlasTitle;
+    mapTitleBlockSubtitle.textContent = settings.atlasSubtitle || DEFAULT_SETTINGS.atlasSubtitle;
+    mapTitleBlockTitle.style.fontFamily = FONT_STACKS[settings.displayFont] || FONT_STACKS.fraunces;
+    mapTitleBlockSubtitle.style.fontFamily = FONT_STACKS[settings.uiFont] || FONT_STACKS.ibmplexmono;
+    mapLegendTitle.style.fontFamily = FONT_STACKS[settings.uiFont] || FONT_STACKS.ibmplexmono;
+    mapLegendBody.style.fontFamily = FONT_STACKS[settings.bodyFont] || FONT_STACKS.manrope;
+    mapTitleBadge.textContent = settings.titleBadge || '';
+    mapTitleBadge.classList.toggle('is-hidden', !String(settings.titleBadge || '').trim());
+    mapLegendTitle.textContent = settings.legendTitle || DEFAULT_SETTINGS.legendTitle;
+    mapLegendBody.textContent = settings.legendBody || DEFAULT_SETTINGS.legendBody;
+    if (settings.titleLogoDataUrl) {
+      mapTitleLogo.src = settings.titleLogoDataUrl;
+      mapTitleLogo.classList.remove('is-hidden');
+    } else {
+      mapTitleLogo.removeAttribute('src');
+      mapTitleLogo.classList.add('is-hidden');
+    }
+    mapPresentationOverlay.style.setProperty('--presentation-accent', settings.accentColor);
+    mapPresentationOverlay.style.setProperty('--presentation-panel', rgbaFromHex(settings.seaColor, 0.92));
+    mapPresentationOverlay.style.setProperty('--presentation-ink', tintHex(settings.accentColor, -0.64));
   }
 
   function refreshModeUi() {
@@ -1079,17 +1315,23 @@
 
   function applySettings(nextSettings, opts) {
     const options = opts || {};
+    const sanitizedNextSettings = nextSettings ? { ...nextSettings } : {};
+    delete sanitizedNextSettings.themeMode;
     const previousSettings = { ...settings };
     settings = {
       ...settings,
-      ...nextSettings,
-      themeMode: 'light',
-      mapStyle: normalizeMapStyle(nextSettings && nextSettings.mapStyle !== undefined ? nextSettings.mapStyle : settings.mapStyle),
-      atlasMode: normalizeAtlasMode(nextSettings && nextSettings.atlasMode !== undefined ? nextSettings.atlasMode : settings.atlasMode),
-      calloutStyle: normalizeCalloutStyle(nextSettings && nextSettings.calloutStyle !== undefined ? nextSettings.calloutStyle : settings.calloutStyle),
-      connectionStyle: normalizeConnectionStyle(nextSettings && nextSettings.connectionStyle !== undefined ? nextSettings.connectionStyle : settings.connectionStyle)
+      ...sanitizedNextSettings,
+      mapStyle: normalizeMapStyle(sanitizedNextSettings.mapStyle !== undefined ? sanitizedNextSettings.mapStyle : settings.mapStyle),
+      atlasMode: normalizeAtlasMode(sanitizedNextSettings.atlasMode !== undefined ? sanitizedNextSettings.atlasMode : settings.atlasMode),
+      calloutStyle: normalizeCalloutStyle(sanitizedNextSettings.calloutStyle !== undefined ? sanitizedNextSettings.calloutStyle : settings.calloutStyle),
+      connectionStyle: normalizeConnectionStyle(sanitizedNextSettings.connectionStyle !== undefined ? sanitizedNextSettings.connectionStyle : settings.connectionStyle),
+      showDirectionArrows: normalizeBooleanSetting(sanitizedNextSettings.showDirectionArrows !== undefined ? sanitizedNextSettings.showDirectionArrows : settings.showDirectionArrows, DEFAULT_SETTINGS.showDirectionArrows),
+      showTitleBlock: normalizeBooleanSetting(sanitizedNextSettings.showTitleBlock !== undefined ? sanitizedNextSettings.showTitleBlock : settings.showTitleBlock, DEFAULT_SETTINGS.showTitleBlock),
+      showLegend: normalizeBooleanSetting(sanitizedNextSettings.showLegend !== undefined ? sanitizedNextSettings.showLegend : settings.showLegend, DEFAULT_SETTINGS.showLegend),
+      showLabels: normalizeBooleanSetting(sanitizedNextSettings.showLabels !== undefined ? sanitizedNextSettings.showLabels : settings.showLabels, DEFAULT_SETTINGS.showLabels),
+      showCallouts: normalizeBooleanSetting(sanitizedNextSettings.showCallouts !== undefined ? sanitizedNextSettings.showCallouts : settings.showCallouts, DEFAULT_SETTINGS.showCallouts),
+      showRoutes: normalizeBooleanSetting(sanitizedNextSettings.showRoutes !== undefined ? sanitizedNextSettings.showRoutes : settings.showRoutes, DEFAULT_SETTINGS.showRoutes)
     };
-    refreshThemeMode();
     document.documentElement.style.setProperty('--font-display', FONT_STACKS[settings.displayFont] || FONT_STACKS.cormorant);
     document.documentElement.style.setProperty('--font-body', FONT_STACKS[settings.bodyFont] || FONT_STACKS.cormorant);
     document.documentElement.style.setProperty('--font-ui', FONT_STACKS[settings.uiFont] || FONT_STACKS.jetbrains);
@@ -1102,10 +1344,10 @@
     document.documentElement.style.setProperty('--route-glow', rgbaFromHex(settings.routeColor, 0.4));
     document.documentElement.style.setProperty('--sea-color', settings.seaColor);
     document.documentElement.style.setProperty('--land-color', settings.landColor);
-    if (nextSettings.markerColor && nextSettings.markerColor !== previousSettings.markerColor) {
+    if (sanitizedNextSettings.markerColor && sanitizedNextSettings.markerColor !== previousSettings.markerColor) {
       markers.forEach((entry) => {
         if (normalizePointColor(entry.markerColor).toLowerCase() === previousSettings.markerColor.toLowerCase()) {
-          entry.markerColor = nextSettings.markerColor;
+          entry.markerColor = sanitizedNextSettings.markerColor;
           updateMarkerAppearance(entry);
         }
       });
@@ -1115,6 +1357,7 @@
     loaderTitle.textContent = settings.atlasTitle;
     refreshPresentationLayerStyle();
     setBaseMap(settings.mapStyle);
+    refreshPresentationOverlay();
     if (isPinsMode() && drawMode) {
       drawMode = false;
       selectedForRoute = [];
@@ -1123,6 +1366,9 @@
     }
     refreshSettingsForm();
     refreshModeUi();
+    refreshAllMarkers();
+    refreshAllLabels();
+    refreshAllBubbles();
     refreshRouteLayers();
     syncActionState();
     refreshWorkflowState();
@@ -1133,11 +1379,11 @@
 
   function openSettingsModal() {
     refreshSettingsForm();
-    settingsModal.classList.add('show');
+    openModal(settingsModal, { trigger: settingsBtn, initialFocus: settingsTitleInput });
   }
 
   function closeSettingsModal() {
-    settingsModal.classList.remove('show');
+    closeModal(settingsModal);
     requestAnimationFrame(() => {
       map.invalidateSize(false);
       refreshAllBubbles();
@@ -1171,9 +1417,32 @@
 
   function updateMarkerAppearance(entry) {
     entry.marker.setIcon(makeIcon(entry));
+    refreshMarkerVisibility(entry);
+    refreshLabelVisibility(entry);
     if (entry.bubbleVisible) {
       updateBubbleContent(entry);
     }
+  }
+
+  function refreshMarkerVisibility(entry) {
+    const markerEl = entry && entry.marker && entry.marker.getElement && entry.marker.getElement();
+    if (!markerEl) return;
+    markerEl.classList.toggle('is-hidden', !hasVisibleMarkers());
+  }
+
+  function refreshLabelVisibility(entry) {
+    const tooltip = entry && entry.marker && entry.marker.getTooltip && entry.marker.getTooltip();
+    const tooltipEl = tooltip && tooltip.getElement && tooltip.getElement();
+    if (!tooltipEl) return;
+    tooltipEl.classList.toggle('is-hidden', !hasVisibleLabels());
+  }
+
+  function refreshAllMarkers() {
+    markers.forEach(refreshMarkerVisibility);
+  }
+
+  function refreshAllLabels() {
+    markers.forEach(refreshLabelVisibility);
   }
 
   function openNameModal(latlng) {
@@ -1187,11 +1456,11 @@
       markerColor: settings.markerColor
     };
     refreshPendingPointStyleUi();
-    nameModal.classList.add('show');
+    openModal(nameModal, { initialFocus: portNameInput });
     setTimeout(() => portNameInput.focus(), 60);
   }
   function closeNameModal() {
-    nameModal.classList.remove('show');
+    closeModal(nameModal);
     pendingLatLng = null;
   }
   function savePort() {
@@ -1246,6 +1515,7 @@
     });
     markers.push(entry);
     if (opts.bubbleVisible) showBubble(entry);
+    requestAnimationFrame(() => refreshLabelVisibility(entry));
     updateStats();
     refreshMarkerVisuals();
     scheduleDraftSave();
@@ -1273,6 +1543,7 @@
   const bubbleHeightValue = document.getElementById('bubbleHeightValue');
   const portSaveBtn = document.getElementById('portSaveBtn');
   const portCancelBtn = document.getElementById('portCancelBtn');
+  const portDuplicateBtn = document.getElementById('portDuplicateBtn');
   const portDeleteBtn = document.getElementById('portDeleteBtn');
   let editingPort = null;
   let editingBubbleWidthUserSized = false;
@@ -1322,12 +1593,12 @@
     bubbleWidthRange.value = String(getBubbleWidth(entry));
     bubbleHeightRange.value = String(getBubbleHeight(entry));
     refreshBubbleSizingUi();
-    portModal.classList.add('show');
+    openModal(portModal, { initialFocus: portEditName });
     setTimeout(() => portEditName.focus(), 60);
   }
 
   function closePortModal() {
-    portModal.classList.remove('show');
+    closeModal(portModal);
     editingPort = null;
     editingPointStyle = null;
     editingBubbleWidthUserSized = false;
@@ -1386,9 +1657,23 @@
     }
 
     closePortModal();
-    showHint(`Port "${newName}" updated.`);
+    showHint(`${getModeCopy().pointSingular} "${newName}" updated.`);
     scheduleDraftSave();
     scheduleHistorySnapshot();
+  }
+
+  function duplicatePortEntry(entry) {
+    const sourcePoint = map.latLngToContainerPoint(entry.latlng);
+    const duplicatedLatLng = map.containerPointToLatLng([sourcePoint.x + 36, sourcePoint.y + 24]);
+    const duplicate = addMarker(duplicatedLatLng, `${entry.name} Copy`, {
+      pointType: entry.pointType,
+      iconKey: entry.iconKey,
+      markerColor: entry.markerColor,
+      details: entry.details || '',
+      bubbleVisible: false
+    });
+    refreshLabelVisibility(duplicate);
+    return duplicate;
   }
 
   function deletePortEntry(entry) {
@@ -1837,6 +2122,8 @@
 
   function updateBubbleContent(entry) {
     if (!entry.bubble) return;
+    entry.bubble.classList.toggle('is-hidden', !hasVisibleCallouts());
+    if (!hasVisibleCallouts()) return;
     const layout = getBubbleLayout(entry);
     persistBubbleLayout(entry, layout);
     applyBubbleDom(entry, layout);
@@ -1862,12 +2149,20 @@
 
   portSaveBtn.addEventListener('click', savePortEdits);
   portCancelBtn.addEventListener('click', closePortModal);
+  portDuplicateBtn.addEventListener('click', () => {
+    if (!editingPort) return;
+    const source = editingPort;
+    closePortModal();
+    const duplicate = duplicatePortEntry(source);
+    showHint(`${getModeCopy().pointSingular} duplicated.`);
+    openPortModal(duplicate);
+  });
   portDeleteBtn.addEventListener('click', () => {
     if (!editingPort) return;
     const ent = editingPort;
     closePortModal();
     deletePortEntry(ent);
-    showHint('Port removed.');
+    showHint(`${getModeCopy().pointSingular} removed.`);
   });
   portModal.addEventListener('click', (e) => { if (e.target === portModal) closePortModal(); });
   portEditName.addEventListener('keydown', (e) => {
@@ -1900,6 +2195,24 @@
     refreshBubbleSizingUi();
   });
   document.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab' && activeModal && activeModal.classList.contains('show')) {
+      const focusable = getFocusableElements(activeModal);
+      if (!focusable.length) {
+        e.preventDefault();
+        activeModal.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+      return;
+    }
     if (e.key !== 'Escape') return;
     if (portModal.classList.contains('show')) closePortModal();
     else if (routeChoiceModal.classList.contains('show')) closeRouteChoice();
@@ -1907,8 +2220,8 @@
     else if (placeModal.classList.contains('show')) closePlaceModal();
     else if (exportModal.classList.contains('show')) closeExportModal();
     else if (settingsModal.classList.contains('show')) closeSettingsModal();
-    else if (confirmModal.classList.contains('show')) confirmModal.classList.remove('show');
-    else if (helpModal.classList.contains('show')) helpModal.classList.remove('show');
+    else if (confirmModal.classList.contains('show')) closeModal(confirmModal);
+    else if (helpModal.classList.contains('show')) closeModal(helpModal);
     else if (measureMode) setMeasureMode(false);
     else if (drawMode) setDrawMode(false);
   });
@@ -1918,10 +2231,10 @@
   const helpModal = document.getElementById('helpModal');
   const helpCloseBtn = document.getElementById('helpCloseBtn');
 
-  helpBtn.addEventListener('click', () => helpModal.classList.add('show'));
-  helpCloseBtn.addEventListener('click', () => helpModal.classList.remove('show'));
+  helpBtn.addEventListener('click', () => openModal(helpModal, { trigger: helpBtn, initialFocus: helpCloseBtn }));
+  helpCloseBtn.addEventListener('click', () => closeModal(helpModal));
   helpModal.addEventListener('click', (e) => {
-    if (e.target === helpModal) helpModal.classList.remove('show');
+    if (e.target === helpModal) closeModal(helpModal);
   });
   panelCollapseBtn.addEventListener('click', () => setPanelHidden(true));
   panelReopenBtn.addEventListener('click', () => setPanelHidden(false));
@@ -1949,7 +2262,10 @@
   });
   settingsBtn.addEventListener('click', openSettingsModal);
   settingsCloseBtn.addEventListener('click', closeSettingsModal);
-  settingsResetBtn.addEventListener('click', () => applySettings({ ...DEFAULT_SETTINGS }));
+  settingsResetBtn.addEventListener('click', () => {
+    if (titleLogoInput) titleLogoInput.value = '';
+    applySettings({ ...DEFAULT_SETTINGS });
+  });
   settingsModal.addEventListener('click', (e) => {
     if (e.target === settingsModal) closeSettingsModal();
   });
@@ -1963,6 +2279,15 @@
     [uiFontSelect, 'change', () => applySettings({ uiFont: uiFontSelect.value })],
     [calloutStyleSelect, 'change', () => applySettings({ calloutStyle: calloutStyleSelect.value })],
     [connectionStyleSelect, 'change', () => applySettings({ connectionStyle: connectionStyleSelect.value })],
+    [showDirectionArrowsSelect, 'change', () => applySettings({ showDirectionArrows: showDirectionArrowsSelect.value === 'on' })],
+    [showTitleBlockSelect, 'change', () => applySettings({ showTitleBlock: showTitleBlockSelect.value === 'on' })],
+    [titleBadgeInput, 'input', () => applySettings({ titleBadge: titleBadgeInput.value })],
+    [showLegendSelect, 'change', () => applySettings({ showLegend: showLegendSelect.value === 'on' })],
+    [legendTitleInput, 'input', () => applySettings({ legendTitle: legendTitleInput.value || DEFAULT_SETTINGS.legendTitle })],
+    [legendBodyInput, 'input', () => applySettings({ legendBody: legendBodyInput.value || DEFAULT_SETTINGS.legendBody })],
+    [showLabelsSelect, 'change', () => applySettings({ showLabels: showLabelsSelect.value === 'on' })],
+    [showCalloutsSelect, 'change', () => applySettings({ showCallouts: showCalloutsSelect.value === 'on' })],
+    [showRoutesSelect, 'change', () => applySettings({ showRoutes: showRoutesSelect.value === 'on' })],
     [accentColorInput, 'input', () => applySettings({ accentColor: accentColorInput.value })],
     [markerColorInput, 'input', () => applySettings({ markerColor: markerColorInput.value })],
     [routeColorInput, 'input', () => applySettings({ routeColor: routeColorInput.value })],
@@ -1970,6 +2295,31 @@
     [seaColorInput, 'input', () => applySettings({ seaColor: seaColorInput.value })],
     [landColorInput, 'input', () => applySettings({ landColor: landColorInput.value })]
   ].forEach(([el, eventName, handler]) => el.addEventListener(eventName, handler));
+  titleLogoInput.addEventListener('change', async () => {
+    const file = titleLogoInput.files && titleLogoInput.files[0];
+    if (!file) {
+      applySettings({ titleLogoDataUrl: '' });
+      return;
+    }
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+      titleLogoInput.value = '';
+      showHint('Logo upload supports PNG, JPEG, and WebP only.');
+      return;
+    }
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error || new Error('Logo read failed'));
+        reader.readAsDataURL(file);
+      });
+      applySettings({ titleLogoDataUrl: dataUrl });
+      showHint('Logo added to the title block.');
+    } catch (err) {
+      console.error('Logo import failed', err);
+      showHint('Logo import failed.');
+    }
+  });
 
   function refreshMarkerVisuals() {
     markers.forEach(m => {
@@ -2031,12 +2381,12 @@
     closePlaceModal({ preserveInput: true, silent: true });
     portSearchInput.value = '';
     renderSearchResults('');
-    searchModal.classList.add('show');
+    openModal(searchModal, { trigger: findPortBtn, initialFocus: portSearchInput });
     setTimeout(() => portSearchInput.focus(), 60);
   }
 
   function closeSearchModal() {
-    searchModal.classList.remove('show');
+    closeModal(searchModal);
   }
 
   findPortBtn.addEventListener('click', openSearchModal);
@@ -2100,16 +2450,24 @@
   async function fetchPlaceResults(query) {
     const cacheKey = query.trim().toLowerCase();
     if (placeSearchCache.has(cacheKey)) return placeSearchCache.get(cacheKey);
+    const elapsed = Date.now() - placeSearchLastStartedAt;
+    if (elapsed < PLACE_SEARCH_MIN_INTERVAL_MS) {
+      await wait(PLACE_SEARCH_MIN_INTERVAL_MS - elapsed);
+    }
     const url = new URL(PLACE_SEARCH_ENDPOINT);
     url.searchParams.set('q', query);
     url.searchParams.set('format', 'jsonv2');
     url.searchParams.set('limit', '8');
     url.searchParams.set('addressdetails', '1');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), PLACE_SEARCH_TIMEOUT_MS);
+    placeSearchLastStartedAt = Date.now();
     const response = await fetch(url.toString(), {
       headers: {
         'Accept': 'application/json'
-      }
-    });
+      },
+      signal: controller.signal
+    }).finally(() => clearTimeout(timeoutId));
     if (!response.ok) {
       throw new Error(`Place search failed with ${response.status}`);
     }
@@ -2135,9 +2493,17 @@
         : rawResults.filter((result) => inferPointTypeFromPlaceResult(result) === selectedType);
       renderPlaceSearchResults(filtered, query, selectedType);
     } catch (error) {
-      console.error('Place search failed', error);
-      placeSearchResults.innerHTML = '<div class="search-empty">Place search failed. Try again in a moment.</div>';
-      showHint('Place search failed.');
+      if (error && error.name === 'AbortError') {
+        placeSearchResults.innerHTML = '<div class="search-empty">Search timed out. Try again in a moment.</div>';
+        showHint('Search timed out — try again.');
+      } else if (String(error && error.message || '').includes('429')) {
+        placeSearchResults.innerHTML = '<div class="search-empty">Search is temporarily rate-limited. Pause for a moment, then try again.</div>';
+        showHint('Search rate-limited — try again in a moment.');
+      } else {
+        console.error('Place search failed', error);
+        placeSearchResults.innerHTML = '<div class="search-empty">Place search failed. Try again in a moment.</div>';
+        showHint('Place search failed.');
+      }
     } finally {
       placeSearchSubmitBtn.disabled = false;
       placeSearchSubmitBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Search';
@@ -2148,7 +2514,7 @@
     setDrawMode(false);
     setMeasureMode(false);
     closeSearchModal();
-    placeModal.classList.add('show');
+    openModal(placeModal, { trigger: placeSearchBtn, initialFocus: placeSearchInput });
     if (!placeSearchResults.children.length) {
       renderPlaceSearchResults([], '', placeTypeFilterSelect.value || 'auto');
     }
@@ -2157,7 +2523,7 @@
 
   function closePlaceModal(options) {
     const { preserveInput = true, silent = false } = options || {};
-    placeModal.classList.remove('show');
+    closeModal(placeModal);
     if (!preserveInput) {
       placeSearchInput.value = '';
       placeTypeFilterSelect.value = 'auto';
@@ -2207,8 +2573,22 @@
 
   async function buildSeaGrid() {
     loaderText.textContent = 'Fetching coastlines…';
-    const resp = await fetch('assets/data/land-110m.json');
-    const topo = await resp.json();
+    let topo = null;
+    try {
+      const cached = localStorage.getItem(LAND_DATA_CACHE_KEY);
+      if (cached) topo = JSON.parse(cached);
+    } catch (err) {
+      console.warn('Failed to parse cached coastline data', err);
+    }
+    if (!topo) {
+      const resp = await fetch('assets/data/land-110m.json');
+      topo = await resp.json();
+      try {
+        localStorage.setItem(LAND_DATA_CACHE_KEY, JSON.stringify(topo));
+      } catch (err) {
+        console.warn('Failed to cache coastline data locally', err);
+      }
+    }
     loaderText.textContent = 'Rasterizing land…';
     const land = topojson.feature(topo, topo.objects.land);
     landFeature = land;
@@ -2368,6 +2748,38 @@
     return null;
   }
 
+  function nearestSeaReachableFromPoint(lat, lng, maxRadius = 12) {
+    const [startX, startY] = latLngToCell(lat, lng);
+    if (!isLand[idx(startX, startY)]) return [startX, startY];
+    const visited = new Uint8Array(GRID_W * GRID_H);
+    visited[idx(startX, startY)] = 1;
+    const queue = [[startX, startY, 0]];
+    let head = 0;
+    let fallback = null;
+    while (head < queue.length) {
+      const [cx, cy, d] = queue[head++];
+      if (d > maxRadius) break;
+      if (!isLand[idx(cx, cy)]) {
+        fallback = fallback || [cx, cy];
+        const [seaLat, seaLng] = cellToLatLng(cx, cy);
+        if (!routeSegmentCrossesLand([lat, lng], [seaLat, seaLng], { startSkip: 0.22, endSkip: 0.04 })) {
+          return [cx, cy];
+        }
+      }
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        let nx = cx + dx;
+        const ny = cy + dy;
+        if (ny < 0 || ny >= GRID_H) continue;
+        nx = (nx + GRID_W) % GRID_W;
+        const k = idx(nx, ny);
+        if (visited[k]) continue;
+        visited[k] = 1;
+        queue.push([nx, ny, d + 1]);
+      }
+    }
+    return fallback || nearestSea(startX, startY, maxRadius);
+  }
+
   function astar(startX, startY, goalX, goalY, penalty) {
     const N = GRID_W * GRID_H;
     const g = new Float32Array(N);
@@ -2473,6 +2885,80 @@
     return out;
   }
 
+  function routeSegmentCrossesLand(a, b, options = {}) {
+    if (!Array.isArray(a) || !Array.isArray(b)) return false;
+    const startSkip = clamp(options.startSkip ?? 0.06, 0, 0.45);
+    const endSkip = clamp(options.endSkip ?? 0.06, 0, 0.45);
+    const [startLat, startLng] = a;
+    const [endLat, endLngSource] = b;
+    const endLng = startLng + getNormalizedLngDelta(startLng, endLngSource);
+    const [sx, sy] = latLngToCell(startLat, startLng);
+    const [gxRaw, gy] = latLngToCell(endLat, endLng);
+    let dx = gxRaw - sx;
+    if (dx > GRID_W / 2) dx -= GRID_W;
+    if (dx < -GRID_W / 2) dx += GRID_W;
+    const dy = gy - sy;
+    const steps = Math.max(6, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy)) * 3.25));
+    for (let step = 1; step < steps; step += 1) {
+      const t = step / steps;
+      if (t < startSkip || t > 1 - endSkip) continue;
+      const x = ((Math.round(sx + dx * t) % GRID_W) + GRID_W) % GRID_W;
+      const y = Math.max(0, Math.min(GRID_H - 1, Math.round(sy + dy * t)));
+      if (isLand[idx(x, y)]) return true;
+    }
+    return false;
+  }
+
+  function simplifyMaritimeRoute(points, tol = 0.5) {
+    if (points.length < 3) return points.slice();
+    const sqTol = tol * tol;
+    const keep = new Uint8Array(points.length);
+    keep[0] = 1;
+    keep[points.length - 1] = 1;
+    const stack = [[0, points.length - 1]];
+    while (stack.length) {
+      const [a, b] = stack.pop();
+      let maxD = 0;
+      let maxI = -1;
+      const [ax, ay] = points[a];
+      const [bx, by] = points[b];
+      const dx = bx - ax;
+      const dy = by - ay;
+      const denom = dx * dx + dy * dy || 1;
+      for (let i = a + 1; i < b; i += 1) {
+        const [px, py] = points[i];
+        const t = ((px - ax) * dx + (py - ay) * dy) / denom;
+        const cx = ax + t * dx;
+        const cy = ay + t * dy;
+        const ddx = px - cx;
+        const ddy = py - cy;
+        const d = ddx * ddx + ddy * ddy;
+        if (d > maxD) {
+          maxD = d;
+          maxI = i;
+        }
+      }
+      const canShortcut = !routeSegmentCrossesLand(points[a], points[b]);
+      if ((maxD > sqTol || !canShortcut) && maxI !== -1) {
+        keep[maxI] = 1;
+        stack.push([a, maxI], [maxI, b]);
+      }
+    }
+    const out = [];
+    for (let i = 0; i < points.length; i += 1) {
+      if (keep[i]) out.push(points[i]);
+    }
+    return out;
+  }
+
+  function maritimeRouteCrossesLand(points) {
+    if (!Array.isArray(points) || points.length < 2) return false;
+    for (let i = 1; i < points.length; i += 1) {
+      if (routeSegmentCrossesLand(points[i - 1], points[i])) return true;
+    }
+    return false;
+  }
+
   function pathLengthKm(latlngs) {
     let sum = 0;
     for (let i = 1; i < latlngs.length; i++) {
@@ -2535,6 +3021,7 @@
       return;
     }
     isPlottingRoute = true;
+    document.body.classList.add('route-busy');
     syncActionState();
     charting.classList.add('show');
     // Yield so UI updates
@@ -2542,8 +3029,8 @@
     try {
       let [sx, sy] = latLngToCell(portA.latlng.lat, portA.latlng.lng);
       let [gx, gy] = latLngToCell(portB.latlng.lat, portB.latlng.lng);
-      const startSnap = nearestSea(sx, sy, 15);
-      const goalSnap = nearestSea(gx, gy, 15);
+      const startSnap = nearestSeaReachableFromPoint(portA.latlng.lat, portA.latlng.lng, 15);
+      const goalSnap = nearestSeaReachableFromPoint(portB.latlng.lat, portB.latlng.lng, 15);
 
       if (!startSnap || !goalSnap) {
         showHint('Unable to reach open sea from one of the ports.');
@@ -2561,8 +3048,9 @@
       const primaryLL = cellsToLatLngs(primaryCells, portA.latlng.lng);
       // Splice in actual port locations at each end for pretty anchoring
       const primaryFull = [[portA.latlng.lat, portA.latlng.lng], ...primaryLL, [portB.latlng.lat, portB.latlng.lng]];
-      const primarySimpl = simplify(primaryFull, 0.4);
-      const primaryKm = pathLengthKm(primarySimpl);
+      const primarySimpl = simplifyMaritimeRoute(primaryFull, 0.4);
+      const primarySafe = maritimeRouteCrossesLand(primarySimpl) ? primaryFull : primarySimpl;
+      const primaryKm = pathLengthKm(primarySafe);
 
       // Search alternative
       const altCells = findAlternative([sx, sy], [gx, gy], primaryCells);
@@ -2571,7 +3059,8 @@
         const overlap = cellOverlap(primaryCells, altCells);
         const altLL = cellsToLatLngs(altCells, portA.latlng.lng);
         const altFull = [[portA.latlng.lat, portA.latlng.lng], ...altLL, [portB.latlng.lat, portB.latlng.lng]];
-        const candidate = simplify(altFull, 0.4);
+        const candidateSimpl = simplifyMaritimeRoute(altFull, 0.4);
+        const candidate = maritimeRouteCrossesLand(candidateSimpl) ? altFull : candidateSimpl;
         const candidateKm = pathLengthKm(candidate);
         // Only offer if routes differ meaningfully and alt isn't absurdly longer
         if (overlap < 0.75 && candidateKm < primaryKm * 2.2) {
@@ -2581,13 +3070,14 @@
       }
 
       if (altSimpl) {
-        offerRouteChoice(portA, portB, primarySimpl, primaryKm, altSimpl, altKm);
+        offerRouteChoice(portA, portB, primarySafe, primaryKm, altSimpl, altKm);
       } else {
-        commitRoute(portA, portB, primarySimpl, primaryKm, 'primary');
+        commitRoute(portA, portB, primarySafe, primaryKm, 'primary');
       }
     } finally {
       charting.classList.remove('show');
       isPlottingRoute = false;
+      document.body.classList.remove('route-busy');
       syncActionState();
     }
   }
@@ -2604,30 +3094,34 @@
         color,
         weight: preview ? 9 : 7,
         opacity: preview ? 0.18 : 0.12,
-        lineCap: 'round'
+        lineCap: 'round',
+        className: 'atlas-route atlas-route-halo'
       });
       const line = L.polyline(renderLatLngs, {
         color,
         weight: preview ? 3 : 2.5,
         opacity: 0.95,
         dashArray: preview ? '10, 10' : '12, 10',
-        lineCap: 'round'
+        lineCap: 'round',
+        className: 'atlas-route atlas-route-line'
       });
-      const arrow = getConnectionArrowLayer(renderLatLngs, color, preview, fromEntry, toEntry);
+      const arrow = hasVisibleDirectionArrows()
+        ? getConnectionArrowLayer(renderLatLngs, color, preview, fromEntry, toEntry)
+        : null;
       return L.layerGroup(arrow ? [halo, line, arrow] : [halo, line]);
     }
 
     const halo = L.polyline(renderLatLngs, {
-      color, weight: preview ? 10 : 8, opacity: preview ? 0.25 : 0.18, lineCap: 'round'
+      color, weight: preview ? 10 : 8, opacity: preview ? 0.25 : 0.18, lineCap: 'round', className: 'atlas-route atlas-route-halo'
     });
     const line = L.polyline(renderLatLngs, {
       color, weight: preview ? 3 : 2.5, opacity: 0.95,
-      dashArray: '8, 10', lineCap: 'round'
+      dashArray: '8, 10', lineCap: 'round', className: 'atlas-route atlas-route-line'
     });
     return L.layerGroup([halo, line]);
   }
 
-  function bindRoutePopup(group, portAName, portBName, km, variant, routeMode = 'maritime', fromEntry = null, toEntry = null) {
+  function bindRoutePopup(group, route, portAName, portBName, km, variant, routeMode = 'maritime', fromEntry = null, toEntry = null) {
     const nm = Math.round(km / 1.852);
     const descriptor = routeMode === 'connection'
       ? getConnectionDescriptor(fromEntry, toEntry)
@@ -2637,8 +3131,23 @@
         <div class="port-popup">
           <strong>${escapeHtml(portAName)} → ${escapeHtml(portBName)}</strong>
           <div class="coord">${Math.round(km).toLocaleString()} km • ${nm.toLocaleString()} nautical mi • ${descriptor}</div>
+          <button class="popup-action-btn" type="button" data-route-delete-id="${route.id}">
+            <i class="fa-solid fa-trash"></i> Remove ${routeMode === 'connection' ? 'connection' : 'route'}
+          </button>
         </div>
       `);
+    });
+    group.eachLayer((layer) => {
+      layer.off('popupopen');
+      layer.on('popupopen', (event) => {
+        const popupEl = event.popup && event.popup.getElement && event.popup.getElement();
+        const deleteBtn = popupEl && popupEl.querySelector('[data-route-delete-id]');
+        if (!deleteBtn) return;
+        deleteBtn.addEventListener('click', () => {
+          deleteRouteById(Number(deleteBtn.dataset.routeDeleteId));
+          map.closePopup();
+        }, { once: true });
+      });
     });
   }
 
@@ -2646,10 +3155,12 @@
     const fallbackPointName = getModeCopy().pointSingular;
     routes.forEach((route) => {
       if (route.layer) map.removeLayer(route.layer);
+      route.layer = null;
+      if (!hasVisibleRoutes()) return;
       const from = findPort(route.fromId);
       const to = findPort(route.toId);
       const nextGroup = drawRouteLayer(route.latlngs, route.variant, false, route.routeMode || 'maritime', from, to).addTo(map);
-      bindRoutePopup(nextGroup, from ? from.name : route.fromName || fallbackPointName, to ? to.name : route.toName || fallbackPointName, route.km, route.variant, route.routeMode || 'maritime', from, to);
+      bindRoutePopup(nextGroup, route, from ? from.name : route.fromName || fallbackPointName, to ? to.name : route.toName || fallbackPointName, route.km, route.variant, route.routeMode || 'maritime', from, to);
       route.layer = nextGroup;
       route.fromName = from ? from.name : route.fromName;
       route.toName = to ? to.name : route.toName;
@@ -2692,7 +3203,7 @@
     routeChoices.appendChild(makeCard(altLabel, altKm, altColor, 'alt', altLL));
 
     routeChoiceState = { primPreview, altPreview };
-    routeChoiceModal.classList.add('show');
+    openModal(routeChoiceModal, { trigger: drawBtn, initialFocus: routeChoices.querySelector('.route-card') || routeChoiceCancel });
     syncActionState();
   }
 
@@ -2703,7 +3214,7 @@
       map.removeLayer(routeChoiceState.altPreview);
       routeChoiceState = null;
     }
-    routeChoiceModal.classList.remove('show');
+    closeModal(routeChoiceModal);
     routeChoices.innerHTML = '';
     syncActionState();
     refreshWorkflowState();
@@ -2810,7 +3321,7 @@
     return L.marker([lat, lng], {
       interactive: false,
       icon: L.divIcon({
-        className: 'connection-arrow-host',
+        className: 'connection-arrow-host atlas-route-arrow',
         html: `<div class="connection-arrow${isAir ? ' is-air' : ''}${preview ? ' is-preview' : ''}" style="--arrow-color:${color}; transform: rotate(${angle}deg);"><i class="fa-solid ${isAir ? 'fa-plane' : 'fa-arrow-right-long'}"></i></div>`,
         iconSize: [34, 34],
         iconAnchor: [17, 17]
@@ -2818,11 +3329,39 @@
     });
   }
 
-  function commitRoute(portA, portB, latlngs, km, variant, routeMode = 'maritime') {
-    const group = drawRouteLayer(latlngs, variant, false, routeMode, portA, portB).addTo(map);
+  function deleteRouteById(routeId) {
+    const index = routes.findIndex((route) => route.id === routeId);
+    if (index === -1) return;
+    const [route] = routes.splice(index, 1);
+    if (route.layer) map.removeLayer(route.layer);
+    updateStats();
+    refreshWorkflowState();
+    showHint(route.routeMode === 'connection' ? 'Connection removed.' : 'Route removed.');
+    scheduleDraftSave();
+    scheduleHistorySnapshot();
+  }
+
+  function commitRoute(portA, portB, latlngs, km, variant, routeMode = 'maritime', routeId = null) {
+    const route = {
+      id: routeId || nextRouteId++,
+      layer: null,
+      fromId: portA.id,
+      toId: portB.id,
+      fromName: portA.name,
+      toName: portB.name,
+      variant,
+      km,
+      latlngs,
+      routeMode
+    };
+    if (route.id >= nextRouteId) nextRouteId = route.id + 1;
+    const group = hasVisibleRoutes()
+      ? drawRouteLayer(latlngs, variant, false, routeMode, portA, portB).addTo(map)
+      : null;
     const nm = Math.round(km / 1.852);
-    bindRoutePopup(group, portA.name, portB.name, km, variant, routeMode, portA, portB);
-    routes.push({ layer: group, fromId: portA.id, toId: portB.id, fromName: portA.name, toName: portB.name, variant, km, latlngs, routeMode });
+    if (group) bindRoutePopup(group, route, portA.name, portB.name, km, variant, routeMode, portA, portB);
+    route.layer = group;
+    routes.push(route);
     updateStats();
     refreshWorkflowState();
     showHint(routeMode === 'connection'
@@ -3026,12 +3565,12 @@
       showHint('The atlas is already empty.');
       return;
     }
-    confirmModal.classList.add('show');
+    openModal(confirmModal, { trigger: clearBtn, initialFocus: confirmCancel });
   });
-  confirmCancel.addEventListener('click', () => confirmModal.classList.remove('show'));
+  confirmCancel.addEventListener('click', () => closeModal(confirmModal));
   confirmOk.addEventListener('click', () => {
     clearAll();
-    confirmModal.classList.remove('show');
+    closeModal(confirmModal);
     showHint('Atlas cleared.');
   });
 
@@ -3064,7 +3603,7 @@
     else if (e.key === 'Escape') { closeNameModal(); }
   });
   nameModal.addEventListener('click', (e) => { if (e.target === nameModal) closeNameModal(); });
-  confirmModal.addEventListener('click', (e) => { if (e.target === confirmModal) confirmModal.classList.remove('show'); });
+  confirmModal.addEventListener('click', (e) => { if (e.target === confirmModal) closeModal(confirmModal); });
 
   /* ===== Export / Import ===== */
   const copyViewBtn = document.getElementById('copyViewBtn');
@@ -3077,7 +3616,16 @@
   const exportModalTitle = document.getElementById('exportModalTitle');
   const exportModalSub = document.getElementById('exportModalSub');
   const exportAreaSelect = document.getElementById('exportAreaSelect');
+  const exportAspectSelect = document.getElementById('exportAspectSelect');
   const exportQualitySelect = document.getElementById('exportQualitySelect');
+  const exportBackgroundSelect = document.getElementById('exportBackgroundSelect');
+  const exportMarkersCheck = document.getElementById('exportMarkersCheck');
+  const exportLabelsCheck = document.getElementById('exportLabelsCheck');
+  const exportCalloutsCheck = document.getElementById('exportCalloutsCheck');
+  const exportRoutesCheck = document.getElementById('exportRoutesCheck');
+  const exportDirectionMarkersCheck = document.getElementById('exportDirectionMarkersCheck');
+  const exportTitleBlockCheck = document.getElementById('exportTitleBlockCheck');
+  const exportLegendCheck = document.getElementById('exportLegendCheck');
   const exportTip = document.getElementById('exportTip');
   const exportCloseBtn = document.getElementById('exportCloseBtn');
   const exportConfirmBtn = document.getElementById('exportConfirmBtn');
@@ -3085,9 +3633,54 @@
   function setExportBusy(isBusy, title, sub) {
     exportModalTitle.textContent = title;
     exportModalSub.textContent = sub;
-    [exportAreaSelect, exportQualitySelect, exportCloseBtn, exportConfirmBtn].forEach((el) => {
+    [
+      exportAreaSelect,
+      exportAspectSelect,
+      exportQualitySelect,
+      exportBackgroundSelect,
+      exportMarkersCheck,
+      exportLabelsCheck,
+      exportCalloutsCheck,
+      exportRoutesCheck,
+      exportDirectionMarkersCheck,
+      exportTitleBlockCheck,
+      exportLegendCheck,
+      exportCloseBtn,
+      exportConfirmBtn
+    ].forEach((el) => {
       el.disabled = isBusy;
     });
+  }
+
+  function resetExportVisibilityControls() {
+    exportMarkersCheck.checked = true;
+    exportLabelsCheck.checked = true;
+    exportCalloutsCheck.checked = true;
+    exportRoutesCheck.checked = true;
+    exportDirectionMarkersCheck.checked = true;
+    exportTitleBlockCheck.checked = true;
+    exportLegendCheck.checked = true;
+  }
+
+  function getExportVisibilityFromModal() {
+    return {
+      markers: !!exportMarkersCheck.checked,
+      labels: !!exportLabelsCheck.checked,
+      callouts: !!exportCalloutsCheck.checked,
+      routes: !!exportRoutesCheck.checked,
+      directionMarkers: !!exportDirectionMarkersCheck.checked,
+      titleBlock: !!exportTitleBlockCheck.checked,
+      legend: !!exportLegendCheck.checked
+    };
+  }
+
+  function applyExportVisibilityOverride(nextVisibility) {
+    exportVisibilityOverride = nextVisibility || null;
+    refreshAllMarkers();
+    refreshAllLabels();
+    refreshAllBubbles();
+    refreshPresentationOverlay();
+    refreshRouteLayers();
   }
 
   function updateExportTip() {
@@ -3099,18 +3692,30 @@
       : exportQualitySelect.value === 'standard'
         ? 'Standard quality keeps file size lighter for quick sharing.'
         : 'High quality is the recommended balance for most atlases.';
-    exportTip.textContent = `This export captures only the map canvas without the studio sidebar. ${frameLabel} ${qualityLabel}`;
+    const aspectLabel = exportAspectSelect.value === 'native'
+      ? 'Native View preserves the current map proportions.'
+      : `The ${exportAspectSelect.options[exportAspectSelect.selectedIndex].text} frame adds presentation padding around the captured map.`;
+    const backgroundLabel = exportBackgroundSelect.value === 'transparent'
+      ? 'Transparent keeps only the rendered map pixels.'
+      : exportBackgroundSelect.value === 'paper'
+        ? 'Paper adds a clean white presentation surround.'
+        : exportBackgroundSelect.value === 'sea'
+          ? 'Sea fill uses your map sea color behind the framed export.'
+          : 'Map background keeps the exact rendered map surface.';
+    const selectedCount = Object.values(getExportVisibilityFromModal()).filter(Boolean).length;
+    exportTip.textContent = `This export captures only the map canvas without the studio sidebar. ${frameLabel} ${qualityLabel} ${aspectLabel} ${backgroundLabel} ${selectedCount} element groups are currently included.`;
   }
 
   function openExportModal() {
     setExportBusy(false, 'Export PNG', 'Choose the framing and output quality.');
+    resetExportVisibilityControls();
     updateExportTip();
-    exportModal.classList.add('show');
+    openModal(exportModal, { trigger: exportPngBtn, initialFocus: exportAreaSelect });
     refreshWorkflowState();
   }
 
   function closeExportModal() {
-    exportModal.classList.remove('show');
+    closeModal(exportModal);
     refreshWorkflowState();
   }
 
@@ -3142,7 +3747,7 @@
 
     markers.forEach((markerEntry) => {
       bounds.extend(markerEntry.latlng);
-      if (markerEntry.bubbleVisible && markerEntry.bubble && markerEntry.bubble.isConnected) {
+      if (hasVisibleCallouts() && markerEntry.bubbleVisible && markerEntry.bubble && markerEntry.bubble.isConnected) {
         const bubbleCard = markerEntry.bubble.querySelector('.info-bubble');
         if (bubbleCard) {
           const rect = bubbleCard.getBoundingClientRect();
@@ -3154,12 +3759,14 @@
       hasContent = true;
     });
 
-    routes.forEach((route) => {
-      route.latlngs.forEach(([lat, lng]) => {
-        bounds.extend([lat, lng]);
-        hasContent = true;
+    if (hasVisibleRoutes()) {
+      routes.forEach((route) => {
+        route.latlngs.forEach(([lat, lng]) => {
+          bounds.extend([lat, lng]);
+          hasContent = true;
+        });
       });
-    });
+    }
 
     return hasContent ? bounds : null;
   }
@@ -3176,9 +3783,12 @@
     markers.forEach((entry) => {
       pushRect(entry.marker.getElement());
       const tooltip = entry.marker.getTooltip();
-      pushRect(tooltip && tooltip.getElement());
-      pushRect(entry.bubble && entry.bubble.querySelector('.info-bubble'));
+      if (hasVisibleLabels()) pushRect(tooltip && tooltip.getElement());
+      if (hasVisibleCallouts()) pushRect(entry.bubble && entry.bubble.querySelector('.info-bubble'));
     });
+
+    if (hasVisibleTitleBlock()) pushRect(mapTitleBlock);
+    if (hasVisibleLegend()) pushRect(mapLegendBlock);
 
     return rects;
   }
@@ -3207,12 +3817,19 @@
     }
   }
 
-  async function withPreparedExportFrame(frameMode, callback) {
+  async function settleMapBeforeCapture(delay = 180) {
+    map.invalidateSize(false);
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await new Promise((resolve) => setTimeout(resolve, delay));
+  }
+
+  async function withPreparedExportFrame(frameMode, visibility, callback) {
     const previousView = {
       center: [map.getCenter().lat, map.getCenter().lng],
       zoom: map.getZoom()
     };
     let changedView = false;
+    applyExportVisibilityOverride(visibility);
 
     if (frameMode === 'fit-atlas') {
       const bounds = getAtlasBounds();
@@ -3225,8 +3842,9 @@
           map.fitBounds(bounds.pad(0.22), { padding: [112, 112], animate: false, maxZoom: 5 });
         }
         changedView = true;
-        await new Promise((resolve) => setTimeout(resolve, 220));
+        await settleMapBeforeCapture(220);
         await nudgeViewToFitOverlayRects(88);
+        await settleMapBeforeCapture(180);
       } else {
         showHint('No plotted atlas content yet, exporting the current view.');
       }
@@ -3239,33 +3857,250 @@
         map.setView(previousView.center, previousView.zoom, { animate: false });
         map.invalidateSize(false);
       }
+      applyExportVisibilityOverride(null);
     }
   }
 
-  async function renderMapCanvas(frameMode, quality) {
+  function buildFramedExportCanvas(canvas, aspectKey, backgroundKey) {
+    const ratio = EXPORT_ASPECTS[aspectKey] || null;
+    const fill = backgroundKey === 'transparent'
+      ? null
+      : backgroundKey === 'paper'
+        ? '#ffffff'
+        : backgroundKey === 'sea'
+          ? settings.seaColor
+          : (getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#ffffff');
+    if (!ratio) {
+      if (fill == null) return canvas;
+      const baseCanvas = document.createElement('canvas');
+      baseCanvas.width = canvas.width;
+      baseCanvas.height = canvas.height;
+      const baseCtx = baseCanvas.getContext('2d');
+      baseCtx.fillStyle = fill;
+      baseCtx.fillRect(0, 0, baseCanvas.width, baseCanvas.height);
+      baseCtx.drawImage(canvas, 0, 0);
+      return baseCanvas;
+    }
+
+    const sourceWidth = canvas.width;
+    const sourceHeight = canvas.height;
+    let outputWidth = sourceWidth;
+    let outputHeight = Math.round(outputWidth / ratio);
+    if (outputHeight < sourceHeight) {
+      outputHeight = sourceHeight;
+      outputWidth = Math.round(outputHeight * ratio);
+    }
+    const padX = Math.round(outputWidth * 0.05);
+    const padY = Math.round(outputHeight * 0.05);
+    const availableWidth = Math.max(1, outputWidth - padX * 2);
+    const availableHeight = Math.max(1, outputHeight - padY * 2);
+    const scale = Math.min(availableWidth / sourceWidth, availableHeight / sourceHeight);
+    const drawWidth = Math.round(sourceWidth * scale);
+    const drawHeight = Math.round(sourceHeight * scale);
+    const offsetX = Math.round((outputWidth - drawWidth) / 2);
+    const offsetY = Math.round((outputHeight - drawHeight) / 2);
+    const framedCanvas = document.createElement('canvas');
+    framedCanvas.width = outputWidth;
+    framedCanvas.height = outputHeight;
+    const framedCtx = framedCanvas.getContext('2d');
+    if (fill != null) {
+      framedCtx.fillStyle = fill;
+      framedCtx.fillRect(0, 0, outputWidth, outputHeight);
+    }
+    framedCtx.drawImage(canvas, offsetX, offsetY, drawWidth, drawHeight);
+    return framedCanvas;
+  }
+
+  function getCanvasRouteSegments(latlngs) {
+    if (!Array.isArray(latlngs) || latlngs.length < 2) return [];
+    const mapWidth = Math.max(1, map.getSize().x);
+    const rawPoints = latlngs.map((latlng) => map.latLngToContainerPoint(L.latLng(latlng)));
+    const segments = [];
+    let currentSegment = [];
+    let previous = null;
+
+    rawPoints.forEach((point) => {
+      let chosen = { x: point.x, y: point.y };
+      if (previous) {
+        const variants = [-1, 0, 1].map((multiplier) => ({
+          x: point.x + multiplier * mapWidth,
+          y: point.y
+        }));
+        chosen = variants.reduce((best, candidate) => {
+          const bestDist = Math.abs(best.x - previous.x);
+          const candidateDist = Math.abs(candidate.x - previous.x);
+          return candidateDist < bestDist ? candidate : best;
+        }, chosen);
+        if (Math.abs(chosen.x - previous.x) > mapWidth * 0.7) {
+          if (currentSegment.length >= 2) segments.push(currentSegment);
+          currentSegment = [];
+        }
+      }
+      currentSegment.push(chosen);
+      previous = chosen;
+    });
+
+    if (currentSegment.length >= 2) segments.push(currentSegment);
+    return segments;
+  }
+
+  function drawPolylineOnCanvas(ctx, segments, options) {
+    if (!Array.isArray(segments) || !segments.length) return;
+    ctx.save();
+    ctx.strokeStyle = options.color;
+    ctx.lineWidth = options.lineWidth;
+    ctx.globalAlpha = options.opacity;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.setLineDash(options.dash || []);
+    segments.forEach((points) => {
+      if (!Array.isArray(points) || points.length < 2) return;
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i += 1) {
+        ctx.lineTo(points[i].x, points[i].y);
+      }
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+
+  function drawConnectionArrowOnCanvas(ctx, routeSegments, color, fromEntry, toEntry) {
+    if (!hasVisibleDirectionArrows() || !Array.isArray(routeSegments) || !routeSegments.length) return;
+    let totalLength = 0;
+    const flattenedSegments = [];
+    routeSegments.forEach((points) => {
+      for (let i = 1; i < points.length; i += 1) {
+        const a = points[i - 1];
+        const b = points[i];
+        const length = Math.hypot(b.x - a.x, b.y - a.y);
+        if (length <= 0.01) continue;
+        flattenedSegments.push({ a, b, length });
+        totalLength += length;
+      }
+    });
+    if (!flattenedSegments.length || totalLength < 18) return;
+    const targetDistance = totalLength * 0.58;
+    let traversed = 0;
+    let chosen = flattenedSegments[flattenedSegments.length - 1];
+    for (const segment of flattenedSegments) {
+      if (traversed + segment.length >= targetDistance) {
+        chosen = segment;
+        break;
+      }
+      traversed += segment.length;
+    }
+    const localDistance = Math.max(0, Math.min(chosen.length, targetDistance - traversed));
+    const ratio = chosen.length <= 0 ? 0 : localDistance / chosen.length;
+    const x = chosen.a.x + (chosen.b.x - chosen.a.x) * ratio;
+    const y = chosen.a.y + (chosen.b.y - chosen.a.y) * ratio;
+    const angle = Math.atan2(chosen.b.y - chosen.a.y, chosen.b.x - chosen.a.x);
+    const isAir = fromEntry && toEntry && fromEntry.pointType === 'airport' && toEntry.pointType === 'airport';
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.92;
+    if (isAir) {
+      ctx.beginPath();
+      ctx.moveTo(8, 0);
+      ctx.lineTo(-4, -4.5);
+      ctx.lineTo(-1.5, -0.8);
+      ctx.lineTo(-8, -0.8);
+      ctx.lineTo(-8, 0.8);
+      ctx.lineTo(-1.5, 0.8);
+      ctx.lineTo(-4, 4.5);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(9, 0);
+      ctx.lineTo(-5, -5);
+      ctx.lineTo(-2.2, 0);
+      ctx.lineTo(-5, 5);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function createExportRouteOverlay() {
+    if (!hasVisibleRoutes() || !routes.length) return null;
+    const mapEl = document.getElementById('map');
+    const width = mapEl.clientWidth;
+    const height = mapEl.clientHeight;
+    if (!width || !height) return null;
+
+    const canvas = document.createElement('canvas');
+    canvas.className = 'export-route-overlay';
+    canvas.width = width;
+    canvas.height = height;
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    routes.forEach((route) => {
+      const from = findPort(route.fromId);
+      const to = findPort(route.toId);
+      const color = route.variant === 'primary'
+        ? getComputedStyle(document.documentElement).getPropertyValue('--route-color').trim()
+        : getComputedStyle(document.documentElement).getPropertyValue('--route-alt-color').trim();
+      const latlngs = getRenderableRouteLatLngs(route.latlngs, route.routeMode || 'maritime');
+      const segments = getCanvasRouteSegments(latlngs);
+      if (route.routeMode === 'connection') {
+        drawPolylineOnCanvas(ctx, segments, { color, lineWidth: 7, opacity: 0.12, dash: [] });
+        drawPolylineOnCanvas(ctx, segments, { color, lineWidth: 2.5, opacity: 0.95, dash: [12, 10] });
+        drawConnectionArrowOnCanvas(ctx, segments, color, from, to);
+      } else {
+        drawPolylineOnCanvas(ctx, segments, { color, lineWidth: 8, opacity: 0.18, dash: [] });
+        drawPolylineOnCanvas(ctx, segments, { color, lineWidth: 2.5, opacity: 0.95, dash: [8, 10] });
+      }
+    });
+
+    mapEl.appendChild(canvas);
+    return canvas;
+  }
+
+  function setNativeRouteVisibility(isVisible) {
+    document.querySelectorAll('.atlas-route, .atlas-route-arrow').forEach((el) => {
+      el.classList.toggle('export-hidden-route', !isVisible);
+    });
+  }
+
+  async function renderMapCanvas(frameMode, quality, aspectKey = 'native', backgroundKey = 'map', visibility = null) {
     const exportQuality = quality || 'high';
     const exportScale = EXPORT_QUALITY_SCALE[exportQuality] || EXPORT_QUALITY_SCALE.high;
     map.closePopup();
 
-    return withPreparedExportFrame(frameMode, async () => {
+    return withPreparedExportFrame(frameMode, visibility, async () => {
       document.body.classList.add('exporting');
-      await new Promise((resolve) => setTimeout(resolve, 180));
+      await settleMapBeforeCapture(180);
+      const exportRouteOverlay = createExportRouteOverlay();
+      setNativeRouteVisibility(false);
 
       const target = document.getElementById('map');
       const targetRect = target.getBoundingClientRect();
-      return html2canvas(target, {
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#ffffff',
-        logging: false,
-        scale: exportScale,
-        width: Math.ceil(targetRect.width),
-        height: Math.ceil(targetRect.height),
-        windowWidth: window.innerWidth,
-        windowHeight: window.innerHeight,
-        scrollX: 0,
-        scrollY: 0
-      });
+      try {
+        return await html2canvas(target, {
+          useCORS: true,
+          allowTaint: false,
+          backgroundColor: backgroundKey === 'transparent'
+            ? null
+            : (getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#ffffff'),
+          logging: false,
+          scale: exportScale,
+          width: Math.ceil(targetRect.width),
+          height: Math.ceil(targetRect.height),
+          windowWidth: window.innerWidth,
+          windowHeight: window.innerHeight,
+          scrollX: 0,
+          scrollY: 0
+        }).then((canvas) => buildFramedExportCanvas(canvas, aspectKey, backgroundKey));
+      } finally {
+        if (exportRouteOverlay && exportRouteOverlay.isConnected) exportRouteOverlay.remove();
+        setNativeRouteVisibility(true);
+      }
     }).finally(() => {
       document.body.classList.remove('exporting');
     });
@@ -3301,6 +4136,7 @@
         bubbleLng: m.bubbleVisible ? getLegacyBubbleLatLng(m).lng : null
       })),
       routes: routes.map(r => ({
+        id: r.id,
         fromId: r.fromId,
         toId: r.toId,
         fromName: r.fromName,
@@ -3319,11 +4155,17 @@
     return atlasState;
   }
 
+  function hasPendingDraftChanges() {
+    const atlasState = buildAtlasState({ includeExported: false });
+    if (!hasMeaningfulAtlasState(atlasState)) return false;
+    return atlasStateSignature(atlasState) !== lastSavedDraftSignature;
+  }
+
   function applyAtlasState(data, opts) {
     const options = opts || {};
     const normalizedData = normalizeAtlasFormat(data);
     if (!normalizedData) {
-      showHint('Import failed — invalid atlas data.');
+      showHint(`Import failed — ${lastAtlasValidationError || 'invalid atlas data.'}`);
       return;
     }
 
@@ -3370,7 +4212,7 @@
           if (!a || !b) return;
           const latlngs = r.latlngs || [[a.latlng.lat, a.latlng.lng], [b.latlng.lat, b.latlng.lng]];
           const km = r.km != null ? r.km : pathLengthKm(latlngs);
-          commitRoute(a, b, latlngs, km, r.variant || 'primary', r.routeMode || 'maritime');
+          commitRoute(a, b, latlngs, km, r.variant || 'primary', r.routeMode || 'maritime', r.id);
         });
 
       });
@@ -3437,6 +4279,7 @@
             })
           },
           properties: {
+            id: route.id,
             featureType: route.routeMode === 'connection' ? 'connection' : 'route',
             fromId: route.fromId,
             toId: route.toId,
@@ -3457,12 +4300,15 @@
       return;
     }
     const exportArea = exportAreaSelect.value;
+    const exportAspect = exportAspectSelect.value;
     const exportQuality = exportQualitySelect.value;
+    const exportBackground = exportBackgroundSelect.value;
+    const exportVisibility = getExportVisibilityFromModal();
 
     setExportBusy(true, 'Rendering PNG…', 'Preparing the selected framing and quality.');
 
     try {
-      const canvas = await renderMapCanvas(exportArea, exportQuality);
+      const canvas = await renderMapCanvas(exportArea, exportQuality, exportAspect, exportBackground, exportVisibility);
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
       if (!blob) throw new Error('PNG blob generation failed');
 
@@ -3471,10 +4317,10 @@
       triggerDownload(blob, `${filenameBase}-${ts}.png`);
 
       closeExportModal();
-      showHint(`PNG exported: map only, ${exportQuality} quality.`);
+      showHint(`PNG exported: ${exportAspect === 'native' ? 'native frame' : exportAspect} at ${exportQuality} quality.`);
     } catch (err) {
       console.error('PNG export error', err);
-      showHint('PNG export failed — check console.');
+      showHint('Export failed — try reducing quality or simplifying the map.', true);
       setExportBusy(false, 'Export PNG', 'Choose the framing and output quality.');
     }
   }
@@ -3491,7 +4337,7 @@
 
     copyViewBtn.disabled = true;
     try {
-      const canvas = await renderMapCanvas('current-view', 'high');
+      const canvas = await renderMapCanvas('current-view', 'high', 'native', 'map');
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
       if (!blob) throw new Error('Clipboard PNG blob generation failed');
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
@@ -3525,7 +4371,7 @@
       const text = await file.text();
       const data = normalizeAtlasFormat(JSON.parse(text));
       if (!data) {
-        showHint('Invalid atlas JSON file.');
+        showHint(`Invalid atlas JSON file — ${lastAtlasValidationError || 'check the file contents.'}`);
         return;
       }
       applyAtlasState(data, { source: 'import' });
@@ -3570,7 +4416,7 @@
   exportModal.addEventListener('click', (e) => {
     if (e.target === exportModal) closeExportModal();
   });
-  [exportAreaSelect, exportQualitySelect].forEach((el) => {
+  [exportAreaSelect, exportAspectSelect, exportQualitySelect, exportBackgroundSelect, exportMarkersCheck, exportLabelsCheck, exportCalloutsCheck, exportRoutesCheck, exportDirectionMarkersCheck, exportTitleBlockCheck, exportLegendCheck].forEach((el) => {
     el.addEventListener('change', updateExportTip);
   });
   jsonFileInput.addEventListener('change', (e) => {
@@ -3599,6 +4445,11 @@
       restoreHistory(1);
     }
   });
+  window.addEventListener('beforeunload', (e) => {
+    if (!hasPendingDraftChanges()) return;
+    e.preventDefault();
+    e.returnValue = '';
+  });
 
   /* ===== Init ===== */
   populatePointTypeSelect(pointTypeInput);
@@ -3608,6 +4459,12 @@
   populateFontSelect(uiFontSelect, ['jetbrains', 'ibmplexmono', 'space', 'manrope']);
   populatePresetGrid();
   storedDraft = loadStoredDraft();
+  lastSavedDraftSignature = storedDraft ? atlasStateSignature({
+    view: storedDraft.view,
+    settings: storedDraft.settings,
+    ports: storedDraft.ports,
+    routes: storedDraft.routes
+  }) : '';
   refreshDraftUi();
   applySettings(loadStoredSettings() || DEFAULT_SETTINGS, { persist: false, recordDraft: false, recordHistory: false });
   const storedUiPrefs = loadUiPrefs();

@@ -28,6 +28,30 @@ Current completion snapshot:
 - `C1`, `C2`, and `C3` (presentation style + sea/land controls) are already live and should be treated as complete.
 - `B8` search copy cleanup is now implemented.
 - `C4` annotation contrast and placement cleanup is now live with draggable callouts, modal size controls, callout style presets, and adaptive callout typography.
+- `D1`, `D2`, `D3`, and `D4` are now live:
+  - curated brand presets including an air-route preset
+  - title block badge plus optional logo upload
+  - editable legend block
+  - clearer map-first presentation copy in the main product flow
+- `E2` and `E3` are now live:
+  - print/presentation aspect options in PNG export
+  - export background choices including paper, sea, and transparent
+- `F1`, `F2`, and `F3` are now live:
+  - route deletion from popup
+  - point duplication
+  - visibility toggles for labels, callouts, routes, and direction markers
+- `G2` is now live:
+  - coastline data is cached locally after the first load
+- `I1` and `I4` are now live:
+  - air-route-ready preset discoverability
+  - direction arrow toggle
+- audit-driven hardening is now live:
+  - raster-only logo uploads
+  - atlas JSON validation with field-level errors
+  - Nominatim timeout plus request-gap protection
+  - storage quota warnings for drafts/settings
+  - accessible dialogs, live-region status updates, and a map `<main>` landmark
+  - unsaved-changes warning before tab close
 - Remaining tasks keep the same IDs and are still open.
 
 ## Track A: Open-source transparency

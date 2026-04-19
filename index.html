@@ -14,7 +14,23 @@
 </head>
 <body>
 
+<main id="mapCanvas" aria-label="Map canvas">
 <div id="map"></div>
+<div class="map-presentation-overlay" id="mapPresentationOverlay" aria-hidden="true">
+  <div class="map-title-block" id="mapTitleBlock">
+    <div class="map-title-block-badge" id="mapTitleBadge"></div>
+    <img class="map-title-block-logo" id="mapTitleLogo" alt="Map title logo">
+    <div class="map-title-block-copy">
+      <div class="map-title-block-title" id="mapTitleBlockTitle">Open Atlas</div>
+      <div class="map-title-block-subtitle" id="mapTitleBlockSubtitle">Map Studio</div>
+    </div>
+  </div>
+  <div class="map-legend-block" id="mapLegendBlock">
+    <div class="map-legend-title" id="mapLegendTitle">Legend</div>
+    <div class="map-legend-body" id="mapLegendBody">Markers, routes, and callouts can be styled in Appearance.</div>
+  </div>
+</div>
+</main>
 
 <!-- Loader -->
 <div class="loader" id="loader">
@@ -196,9 +212,10 @@
   <i class="fa-solid fa-anchor"></i>
   <span id="hintText"></span>
 </div>
+<div class="sr-only" id="srAnnouncer" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <!-- Name input modal -->
-<div class="modal-backdrop" id="nameModal">
+<div class="modal-backdrop" id="nameModal" role="dialog" aria-modal="true" aria-labelledby="nameModalTitle" tabindex="-1">
   <div class="modal">
     <h3 id="nameModalTitle">Name this Port</h3>
     <div class="modal-sub">Lat <span id="modalLat">—</span> • Lng <span id="modalLng">—</span></div>
@@ -222,7 +239,7 @@
 </div>
 
 <!-- Port details modal -->
-<div class="modal-backdrop" id="portModal">
+<div class="modal-backdrop" id="portModal" role="dialog" aria-modal="true" aria-labelledby="portModalTitle" tabindex="-1">
   <div class="modal" style="min-width: 360px;">
     <h3 id="portModalTitle">Port Details</h3>
     <div class="modal-sub" id="portModalSub">—</div>
@@ -266,6 +283,9 @@
     </div>
 
     <div class="modal-actions">
+      <button class="btn" id="portDuplicateBtn" style="margin-right:auto;">
+        <i class="fa-solid fa-clone"></i> Duplicate
+      </button>
       <button class="btn btn-danger" id="portDeleteBtn" style="margin-right:auto;">
         <i class="fa-solid fa-trash"></i> <span id="deletePointLabel">Delete Port</span>
       </button>
@@ -280,7 +300,7 @@
 </div>
 
 <!-- Place search modal -->
-<div class="modal-backdrop" id="placeModal">
+<div class="modal-backdrop" id="placeModal" role="dialog" aria-modal="true" aria-labelledby="placeModalTitle" tabindex="-1">
   <div class="modal" style="min-width: 360px; max-width: 560px;">
     <h3 id="placeModalTitle">Search Places</h3>
     <div class="modal-sub" id="placeModalSub">Search the world for a city, airport, port, or landmark and add it directly to this map.</div>
@@ -314,7 +334,7 @@
 </div>
 
 <!-- Export options modal -->
-<div class="modal-backdrop" id="exportModal">
+<div class="modal-backdrop" id="exportModal" role="dialog" aria-modal="true" aria-labelledby="exportModalTitle" tabindex="-1">
   <div class="modal" style="min-width: 360px; max-width: 560px;">
     <h3 id="exportModalTitle">Export PNG</h3>
     <div class="modal-sub" id="exportModalSub">Choose the framing and output quality.</div>
@@ -327,12 +347,64 @@
         </select>
       </div>
       <div class="settings-field">
+        <label for="exportAspectSelect">Aspect</label>
+        <select id="exportAspectSelect">
+          <option value="native">Native View</option>
+          <option value="16:9">Presentation 16:9</option>
+          <option value="4:5">Portrait 4:5</option>
+          <option value="1:1">Square 1:1</option>
+          <option value="a4-landscape">Print A4 Landscape</option>
+        </select>
+      </div>
+      <div class="settings-field">
         <label for="exportQualitySelect">Quality</label>
         <select id="exportQualitySelect">
           <option value="high">High</option>
           <option value="ultra">Ultra</option>
           <option value="standard">Standard</option>
         </select>
+      </div>
+      <div class="settings-field">
+        <label for="exportBackgroundSelect">Background</label>
+        <select id="exportBackgroundSelect">
+          <option value="map">Use map background</option>
+          <option value="sea">Sea color fill</option>
+          <option value="paper">Paper white fill</option>
+          <option value="transparent">Transparent</option>
+        </select>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">Include In Export</div>
+      <div class="export-check-grid">
+        <label class="export-check-option">
+          <input id="exportMarkersCheck" type="checkbox" checked>
+          <span>Point markers</span>
+        </label>
+        <label class="export-check-option">
+          <input id="exportLabelsCheck" type="checkbox" checked>
+          <span>Point labels</span>
+        </label>
+        <label class="export-check-option">
+          <input id="exportCalloutsCheck" type="checkbox" checked>
+          <span>Callouts</span>
+        </label>
+        <label class="export-check-option">
+          <input id="exportRoutesCheck" type="checkbox" checked>
+          <span>Routes &amp; connections</span>
+        </label>
+        <label class="export-check-option">
+          <input id="exportDirectionMarkersCheck" type="checkbox" checked>
+          <span>Direction markers</span>
+        </label>
+        <label class="export-check-option">
+          <input id="exportTitleBlockCheck" type="checkbox" checked>
+          <span>Title block</span>
+        </label>
+        <label class="export-check-option">
+          <input id="exportLegendCheck" type="checkbox" checked>
+          <span>Legend</span>
+        </label>
       </div>
     </div>
     <div class="settings-tip" id="exportTip">Map-only export captures the current viewport at high quality.</div>
@@ -348,9 +420,9 @@
 </div>
 
 <!-- Route choice modal -->
-<div class="modal-backdrop" id="routeChoiceModal">
+<div class="modal-backdrop" id="routeChoiceModal" role="dialog" aria-modal="true" aria-labelledby="routeChoiceTitle" tabindex="-1">
   <div class="modal">
-    <h3>Choose Your Course</h3>
+    <h3 id="routeChoiceTitle">Choose Your Course</h3>
     <div class="modal-sub" id="routeChoiceSub">Two viable sea routes detected.</div>
     <div class="route-choices" id="routeChoices"></div>
     <div class="modal-actions">
@@ -362,7 +434,7 @@
 </div>
 
 <!-- Port search modal -->
-<div class="modal-backdrop" id="searchModal">
+<div class="modal-backdrop" id="searchModal" role="dialog" aria-modal="true" aria-labelledby="searchModalTitle" tabindex="-1">
   <div class="modal" style="min-width: 360px; max-width: 520px;">
     <h3 id="searchModalTitle">Find a Saved Location</h3>
     <div class="modal-sub" id="searchModalSub">Search the locations already in this atlas and jump to one quickly</div>
@@ -377,9 +449,9 @@
 </div>
 
 <!-- Settings modal -->
-<div class="modal-backdrop" id="settingsModal">
+<div class="modal-backdrop" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" tabindex="-1">
   <div class="modal" style="min-width: 380px; max-width: 680px;">
-    <h3>Studio Settings</h3>
+    <h3 id="settingsTitle">Studio Settings</h3>
     <div class="modal-sub">Customize the atlas look, fonts, and export personality</div>
 
     <div class="settings-preview" id="settingsPreview">
@@ -466,7 +538,79 @@
             <option value="straight">Straight</option>
           </select>
         </div>
+        <div class="settings-field">
+          <label for="showDirectionArrowsSelect">Connection Direction Markers</label>
+          <select id="showDirectionArrowsSelect">
+            <option value="on">Show</option>
+            <option value="off">Hide</option>
+          </select>
+        </div>
       </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Presentation Blocks</div>
+      <div class="settings-grid">
+        <div class="settings-field">
+          <label for="showTitleBlockSelect">Title Block</label>
+          <select id="showTitleBlockSelect">
+            <option value="on">Show</option>
+            <option value="off">Hide</option>
+          </select>
+        </div>
+        <div class="settings-field">
+          <label for="titleBadgeInput">Badge Label</label>
+          <input id="titleBadgeInput" type="text" placeholder="Editorial / Flights / Trade" autocomplete="off">
+        </div>
+        <div class="settings-field full-span">
+          <label for="titleLogoInput">Logo Image</label>
+          <input id="titleLogoInput" type="file" accept="image/png,image/jpeg,image/webp">
+        </div>
+        <div class="settings-field">
+          <label for="showLegendSelect">Legend</label>
+          <select id="showLegendSelect">
+            <option value="on">Show</option>
+            <option value="off">Hide</option>
+          </select>
+        </div>
+        <div class="settings-field">
+          <label for="legendTitleInput">Legend Title</label>
+          <input id="legendTitleInput" type="text" placeholder="Legend" autocomplete="off">
+        </div>
+        <div class="settings-field full-span">
+          <label for="legendBodyInput">Legend Text</label>
+          <textarea id="legendBodyInput" rows="3" placeholder="Add a short legend, note, or source line for exported maps."></textarea>
+        </div>
+      </div>
+      <div class="settings-tip">Presentation blocks appear directly on the map canvas and are included in Copy View and PNG exports.</div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Layer Visibility</div>
+      <div class="settings-grid">
+        <div class="settings-field">
+          <label for="showLabelsSelect">Point Labels</label>
+          <select id="showLabelsSelect">
+            <option value="on">Show</option>
+            <option value="off">Hide</option>
+          </select>
+        </div>
+        <div class="settings-field">
+          <label for="showCalloutsSelect">Callouts</label>
+          <select id="showCalloutsSelect">
+            <option value="on">Show</option>
+            <option value="off">Hide</option>
+          </select>
+        </div>
+        <div class="settings-field">
+          <label for="showRoutesSelect">Routes &amp; Connections</label>
+          <select id="showRoutesSelect">
+            <option value="on">Show</option>
+            <option value="off">Hide</option>
+          </select>
+        </div>
+      </div>
+      <div class="settings-tip">Visibility changes affect both the live map and exported visuals, but your underlying saved data stays intact.</div>
     </div>
 
     <div class="settings-section">
@@ -511,9 +655,9 @@
 </div>
 
 <!-- Help/FAQ modal -->
-<div class="modal-backdrop" id="helpModal">
+<div class="modal-backdrop" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle" tabindex="-1">
   <div class="modal" style="max-width: 600px;">
-    <h3>Open Atlas — Guide</h3>
+    <h3 id="helpTitle">Open Atlas — Guide</h3>
     <div class="modal-sub">Quick reference for navigating the atlas</div>
 
     <div style="margin-top: 20px; max-height: 60vh; overflow-y: auto; padding-right: 8px;">
@@ -538,6 +682,7 @@
           • If two significantly different maritime routes exist, you'll be prompted to choose your preferred course<br>
           • In <strong>Connections</strong> mode, click <strong>Add connection</strong> and choose any two saved locations<br>
           • Use <strong>Appearance → Connection Style</strong> to switch between clean straight links and curved presentation arcs<br>
+          • Use the route popup to remove an existing route or connection instantly<br>
           • Routes and connections both show distance in km and nautical miles when clicked
         </div>
       </div>
@@ -552,6 +697,7 @@
           • <strong>Drag the bubble</strong> to reposition it relative to the point and keep important map details visible<br>
           • Short notes auto-fit to a compact bubble by default<br>
           • Use the <strong>Bubble Size</strong> controls in the point details modal to make the callout wider, taller, or reset it to auto-fit<br>
+          • Duplicate a point from its details modal when you want a quick variant with similar styling<br>
           • Uncheck the box and save to hide the bubble
         </div>
       </div>
@@ -574,7 +720,9 @@
           • Click <strong>Export PNG</strong> in the Save &amp; Share section<br>
           • PNG exports now capture <strong>only the map view</strong>, without the studio sidebar<br>
           • Capture either the current viewport or automatically fit all saved points, labels, bubbles, and routes into frame<br>
+          • Every export element group starts checked by default, and you can uncheck markers, labels, callouts, routes, direction markers, title block, or legend before rendering<br>
           • Pick standard, high, or ultra output quality depending on how heavy you want the file to be<br>
+          • Choose a presentation aspect ratio and background fill when you want a slide-ready or print-ready export<br>
           • The PNG is saved with a timestamp: <code>open-atlas-YYYY-MM-DD...</code><br>
           • High-resolution output suitable for printing or sharing
         </div>
@@ -595,6 +743,7 @@
           • Click <strong>Export JSON</strong> to save your entire atlas<br>
           • The JSON file includes all saved points (names, coordinates, notes, icons, colors, bubble positions), all routes or connections (exact paths, distances), and the current map view<br>
           • Save this file to back up your work or share it with others<br>
+          • Draft data is kept locally in this browser, so avoid shared devices if your atlas contains sensitive notes or locations<br>
           • Filename format: <code>open-atlas-YYYY-MM-DD...</code>
         </div>
       </div>
@@ -627,6 +776,7 @@
           • Use <strong>Map Mode</strong> to switch between maritime routing, location-only pins, and straight-line connections<br>
           • Choose <strong>Presentation Flat</strong> when you want a cleaner editorial export with custom sea and land colors<br>
           • The live preview card shows how your title, palette, and typography will read before you export<br>
+          • You can add a title block, badge, optional logo image, legend text, and visibility toggles for labels, callouts, and routes<br>
           • Atlas title and subtitle are part of your saved JSON and GeoJSON metadata<br>
           • Theme choices are also stored in your browser so the workspace reopens with your preferred look
         </div>
@@ -666,9 +816,9 @@
 </div>
 
 <!-- Confirm modal -->
-<div class="modal-backdrop" id="confirmModal">
+<div class="modal-backdrop" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" tabindex="-1">
   <div class="modal">
-    <h3>Clear the Atlas?</h3>
+    <h3 id="confirmTitle">Clear the Atlas?</h3>
     <div class="modal-sub">This removes all ports and routes.</div>
     <div class="modal-actions">
       <button class="btn" id="confirmCancel" style="background:transparent; color:var(--ink-soft);">

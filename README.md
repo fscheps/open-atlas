@@ -21,12 +21,18 @@ Open Atlas is a static, open-source map storytelling app built for easy sharing 
 - Save and reopen atlases as JSON for continued editing
 - Autosave local drafts and restore them later from the control panel
 - Undo and redo atlas changes in the browser
-- Export maps as PNG with framing and quality controls
+- Add title blocks, badge labels, optional logo art, and editable legend notes directly on the map canvas
+- Upload title-block logos as PNG, JPEG, or WebP
+- Toggle point labels, callouts, routes, and direction markers without deleting underlying data
+- Duplicate points quickly from the details modal and remove routes or connections from their popup
+- Export maps as PNG with framing, aspect-ratio, background, quality, and per-element include controls
 - Copy the current map view straight to the clipboard without downloading a file
 - Export map data as GeoJSON for GIS and downstream tooling
 - Customize title, subtitle, fonts, colors, basemap style, and flat presentation sea/land colors
 - Choose connection style and callout style in the appearance controls
+- Cache coastline data locally after the first load for faster repeat startups
 - Keep everything fully static and GitHub Pages friendly
+- Get warned before closing the tab when the current atlas has unsaved draft changes
 
 ## Use it
 
@@ -34,7 +40,7 @@ Open Atlas is designed for a simple workflow:
 
 1. Create ports, locations, or connections depending on the chosen mode.
 2. Use `Search places` when you want to add a real-world city, airport, port, or landmark without clicking manually.
-3. Tweak the visual identity in `Studio Settings`.
+3. Tweak the visual identity in `Studio Settings`, including title blocks, legend text, layer visibility, and export personality.
 4. Let the in-browser draft system keep your latest working state close at hand.
 5. Export JSON as the editable master file.
 6. Re-import that JSON later to continue working.
@@ -102,8 +108,16 @@ JSON exports are the editable source of truth for the app. They include:
 - ports or locations
 - routes or connections
 - current visual settings
+- presentation-block settings like title badge, logo image, legend text, and layer visibility
 
 Draft autosaves reuse the same atlas shape and live only in the browser via `localStorage`.
+
+Important note:
+
+- local drafts and settings are stored in this browser, so avoid shared devices for sensitive maps
+- imported JSON is validated before it is applied, and the UI reports the first failing field it finds
+- place search is submit-based, rate-limited, and times out cleanly instead of spinning forever
+- uploaded title logos are intentionally limited to PNG, JPEG, and WebP
 
 The app now writes the canonical `open-atlas` JSON format and still accepts the older prototype-era `mariners-atlas` format on import.
 

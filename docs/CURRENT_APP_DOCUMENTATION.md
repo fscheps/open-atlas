@@ -12,12 +12,14 @@ Open Atlas is a static browser application for building visual map atlases with:
 - straight or curved-arc connections for network and flight-style maps
 - airport-aware directional air-route presentation inside `Connections` mode
 - notes and draggable annotation bubbles with auto-fit plus manual size controls
+- on-map title block, badge, optional logo image, and legend presentation blocks
+- layer visibility toggles for labels, callouts, routes, and direction markers
 - draft autosave
 - undo and redo
-- PNG export with framing and quality controls
+- PNG export with framing, aspect, background, and quality controls
 - JSON import and export
 - GeoJSON export
-- theme, font, and color controls
+- font and color controls
 
 The project is intentionally:
 
@@ -79,7 +81,9 @@ The project is intentionally:
 - Alternative route choice when a second viable path is meaningfully different
 - Configurable straight or arc connection drawing between two saved points in `Connections` mode
 - Directional arrow markers on connection links, with plane icons when both endpoints are airports
+- Optional direction-marker toggle for connection links
 - Distance display in kilometers and nautical miles
+- Route and connection removal directly from the popup
 
 ### Persistence
 
@@ -87,6 +91,9 @@ The project is intentionally:
 - Draft autosave to `localStorage`
 - Draft restore/discard controls
 - Undo/redo history stored in memory for the current session
+- Local coastline dataset cache after first load
+- Unsaved-changes guard before tab close when the live atlas differs from the last saved draft
+- Atlas JSON validation with user-visible field-level errors during import
 
 ### Visual customization
 
@@ -96,10 +103,15 @@ The project is intentionally:
 - Display, body, and UI fonts
 - Callout style
 - Connection style
+- Direction marker visibility
+- Title block badge text and optional uploaded logo image
+- Editable legend block
+- Layer visibility toggles
 - Accent, marker, and route colors
 - Sea and land colors for presentation styling
 - Curated visual presets
 - Live settings preview card in the appearance modal
+- Raster-only title logo upload (`PNG`, `JPEG`, `WebP`)
 
 ### Workspace shell
 
@@ -113,9 +125,22 @@ The project is intentionally:
 
 - PNG export with:
   - current-view or fit-atlas framing
+  - native, 16:9, 4:5, 1:1, or A4 landscape aspect framing
+  - map, sea, paper, or transparent background modes
+  - checkbox-based include controls for markers, labels, callouts, routes, direction markers, title block, and legend
   - standard, high, or ultra quality
 - direct clipboard copy of the current map view without the studio sidebar
 - GeoJSON export for interoperability
+
+### Runtime safeguards
+
+- Place search uses a submit-only flow against OpenStreetMap Nominatim
+- Nominatim requests are cached, rate-limited to at least one second between dispatches, and aborted after a timeout
+- Draft/settings persistence surfaces browser storage quota failures to the user
+- Route plotting uses a wait cursor while pathfinding is in progress
+- Toasts are mirrored into an `aria-live` status region for screen reader feedback
+- All app modals now use `role="dialog"` plus focus trapping and focus return
+- The map workspace is wrapped in a semantic `<main aria-label="Map canvas">` landmark
 
 ## State model
 
@@ -133,7 +158,7 @@ The editable atlas export shape currently includes:
 ```json
 {
   "format": "open-atlas",
-  "version": 8,
+  "version": 9,
   "exported": "ISO timestamp",
   "view": {
     "center": [25, -30],
@@ -143,13 +168,22 @@ The editable atlas export shape currently includes:
     "atlasTitle": "Open Atlas",
     "atlasSubtitle": "Map Studio",
     "atlasMode": "maritime",
-    "themeMode": "light",
     "mapStyle": "positron",
     "displayFont": "fraunces",
     "bodyFont": "manrope",
     "uiFont": "ibmplexmono",
     "calloutStyle": "editorial",
     "connectionStyle": "arc",
+    "showDirectionArrows": true,
+    "showTitleBlock": true,
+    "titleBadge": "",
+    "titleLogoDataUrl": "",
+    "showLegend": false,
+    "legendTitle": "Legend",
+    "legendBody": "Markers, routes, and callouts can be styled in Appearance.",
+    "showLabels": true,
+    "showCallouts": true,
+    "showRoutes": true,
     "accentColor": "#18567a",
     "markerColor": "#0b7a75",
     "routeColor": "#18567a",
@@ -184,12 +218,14 @@ The editable atlas export shape currently includes:
 
 Notes:
 
-- `version` is currently `7`
+- `version` is currently `9`
 - JSON is the source-of-truth editable format
 - GeoJSON is an export convenience format, not the primary editable schema
 - draft autosaves reuse the same atlas shape plus a `draftSavedAt` timestamp
 - the app still accepts legacy `mariners-atlas` JSON on import and during browser draft migration
+- legacy `themeMode` values are accepted on import and ignored because the app is now light-only
 - routes may now include a `routeMode` field such as `maritime` or `connection`
+- routes may now include a stable `id`
 - point records may now include a `pointType` field such as `port`, `city`, `airport`, or `location`
 - bubbles now store width, height, and offset-from-point values
 
@@ -206,6 +242,7 @@ Notes:
 - measurement tools
 - atlas import/export
 - PNG export preparation and rendering
+- map presentation overlay rendering
 
 ## External services and assets
 
@@ -231,6 +268,7 @@ Notes:
 - `Presentation Flat` uses the built-in world land geometry instead of a tile layer
 - tile-based styles still depend on external CARTO basemap requests
 - place search intentionally uses a submit-based query flow rather than autocomplete because the public Nominatim usage policy forbids client-side autocomplete on the shared endpoint
+- title-block logo uploads are intentionally restricted to raster formats to avoid unsafe embedded SVG content
 
 ## Known architectural constraints
 
@@ -256,7 +294,7 @@ Before calling a change done, verify:
 
 The best product expansion paths are:
 
-1. richer air-route presets and airport-focused styling
-2. optional logo, legend, and print/export presentation blocks
-3. city-to-port helper suggestions after place search
-4. more brand-ready export and presentation tooling
+1. smarter city-to-port helper suggestions after place search
+2. richer airport-specific presets beyond the current `Airway` theme
+3. more brand-ready export and presentation tooling
+4. optional vector export paths such as SVG or print PDFs

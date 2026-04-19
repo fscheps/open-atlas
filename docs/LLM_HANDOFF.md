@@ -15,6 +15,7 @@ This file is meant for a future human contributor or another coding model.
 - plain HTML
 - plain CSS
 - plain JavaScript
+- light-only visual system
 - vendored Leaflet
 - vendored html2canvas
 - vendored Interact.js
@@ -27,9 +28,9 @@ This file is meant for a future human contributor or another coding model.
 
 The highest-value next work is:
 
-1. preserving a polished export workflow while adding more presentation options
-2. richer air-route presets, legends, and brand-ready presentation tooling
-3. continued attribution/license transparency when adding new services or assets
+1. smarter city-to-port helper suggestions inside place search
+2. vector-friendly export paths such as SVG or print PDF output
+3. richer airport- and business-map presets on top of the current `Airway` presentation tooling
 4. optional offline-friendly work beyond the remaining basemap/search network dependencies
 
 ## Important constraints
@@ -39,6 +40,7 @@ The highest-value next work is:
 - avoid large framework migrations
 - keep tasks small and independently shippable
 - preserve JSON compatibility whenever practical
+- keep uploaded title logos raster-only unless a proper SVG sanitization path is added
 
 ## Editing guidance
 
@@ -46,6 +48,7 @@ The highest-value next work is:
 - update docs whenever behavior changes
 - if a feature changes export structure, document it immediately
 - if you add a dependency, also update `THIRD_PARTY.md`
+- if you touch search or imports, preserve the current timeout/rate-limit and validation safeguards
 
 ## Good task shape for lighter models
 
