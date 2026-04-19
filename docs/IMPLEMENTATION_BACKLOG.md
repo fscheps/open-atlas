@@ -11,6 +11,12 @@ Rules for working this backlog:
 
 Current completion snapshot:
 
+- `A1`, `A2`, `A3`, `A4`, and `A5` are now live:
+  - attribution doc
+  - vendored runtime JS
+  - vendored runtime CSS and icon assets
+  - self-hosted fonts
+  - tightened CSP
 - `B1`, `B2`, `B3`, `B4`, `B5`, `B6`, and `B7` are now live:
   - mode selector
   - pins mode

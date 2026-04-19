@@ -47,6 +47,10 @@ Open Atlas is designed for a simple workflow:
 - `index.html`
 - `assets/styles/app.css`
 - `assets/scripts/app.js`
+- `assets/fonts/open-atlas-fonts.css`
+- `assets/data/land-110m.json`
+- `assets/vendor/leaflet/`
+- `assets/vendor/fontawesome/`
 - `assets/vendor/interact.min.js`
 - `assets/open-atlas-verification.png`
 - `docs/prototype_with_poe/`
@@ -60,6 +64,7 @@ For handoff and continued iteration, use these files as the current source of tr
 - `docs/IMPLEMENTATION_BACKLOG.md`
 - `docs/LLM_HANDOFF.md`
 - `THIRD_PARTY.md`
+- `ATTRIBUTION.md`
 
 ## Run locally
 
@@ -118,6 +123,7 @@ Please read:
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 - [SECURITY.md](SECURITY.md)
 - [THIRD_PARTY.md](THIRD_PARTY.md)
+- [ATTRIBUTION.md](ATTRIBUTION.md)
 - [docs/CURRENT_APP_DOCUMENTATION.md](docs/CURRENT_APP_DOCUMENTATION.md)
 - [docs/IMPLEMENTATION_BACKLOG.md](docs/IMPLEMENTATION_BACKLOG.md)
 

@@ -2207,7 +2207,7 @@
 
   async function buildSeaGrid() {
     loaderText.textContent = 'Fetching coastlines…';
-    const resp = await fetch('https://unpkg.com/world-atlas@2/land-110m.json');
+    const resp = await fetch('assets/data/land-110m.json');
     const topo = await resp.json();
     loaderText.textContent = 'Rasterizing land…';
     const land = topojson.feature(topo, topo.objects.land);

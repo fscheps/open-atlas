@@ -34,6 +34,14 @@ The project is intentionally:
   Visual system, layout, modals, panel styling, responsive rules
 - `assets/scripts/app.js`
   App state, map behavior, routing, export logic, autosave, history
+- `assets/fonts/`
+  Self-hosted font files plus local `@font-face` stylesheet
+- `assets/data/land-110m.json`
+  Local world land dataset used for routing and presentation rendering
+- `assets/vendor/leaflet/`
+  Local Leaflet JS, CSS, and image assets
+- `assets/vendor/fontawesome/`
+  Local icon CSS and webfonts
 - `assets/vendor/interact.min.js`
   Vendored drag interaction dependency used by the callout overlay system
 - `docs/prototype_with_poe/`
@@ -203,7 +211,7 @@ Notes:
 
 See [THIRD_PARTY.md](/Users/fernandoscheps/Documents/Vibe_Coding_Projects/Custom_Maps/THIRD_PARTY.md:1).
 
-Important current external dependencies:
+Important current runtime dependencies:
 
 - Leaflet
 - html2canvas
@@ -212,8 +220,11 @@ Important current external dependencies:
 - world-atlas land data
 - CARTO basemap tiles
 - OpenStreetMap Nominatim search endpoint
-- Google Fonts
 - Font Awesome Free
+
+Important note:
+
+- only the basemap tiles and Nominatim search remain network-dependent at runtime; the app libraries, fonts, icons, and land dataset are now shipped locally
 
 Notes:
 
@@ -245,7 +256,7 @@ Before calling a change done, verify:
 
 The best product expansion paths are:
 
-1. vendored dependencies and attribution docs for a cleaner OSS story
-2. self-hosted fonts and tighter CSP
-3. richer air-route presets and airport-focused styling
-4. optional logo, legend, and print/export presentation blocks
+1. richer air-route presets and airport-focused styling
+2. optional logo, legend, and print/export presentation blocks
+3. city-to-port helper suggestions after place search
+4. more brand-ready export and presentation tooling
